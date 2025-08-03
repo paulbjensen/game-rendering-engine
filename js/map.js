@@ -1,26 +1,46 @@
 /*
-    Create an isometric tile map in the game world using HTML5 canvas - this is fun but will it handle everything that is needed, especially characters and clicking on objects?
+    Create an isometric tile map in the game world using HTML5 canvas.
 
-    This might be where React Three Fiber really begins to shine.  It will be interesting to see how the performance compares between the two approaches.
+    This is fun but will it handle everything that is needed, 
+    especially characters and clicking on objects?
+
+    This might be where React Three Fiber really begins to shine.
+    It will be interesting to see how the performance compares between 
+    the two approaches.
 */
 
+/*
+    We define the map dimensions here to help with drawing 
+    the map onto the canvas
+*/
 const mapWidth = 15;
 const mapHeight = 15;
 
-// NOTE - these should be the default tile width and height values, that are used for standard tiles, then any tiles which have different dimensions should be specified with that
+/*
+    NOTE - these should be the default tile width and height values, 
+    that are used for standard tiles. Any tiles which have different
+    dimensions should be specified with that.
+*/
 const BASE_TILE_WIDTH = 64;
 const BASE_TILE_HEIGHT = 32;
 
 // Set the aspect ratio for the canvas
 const aspectRatio = 2; // Adjust this value as needed
 
+/*
+    A helper function to load images in the browser without needing
+    to render them in the page yet
+*/
 const loadImage = (src) => {
     const image = new Image();
     image.src = src;
     return image;
 };
 
-// This will be where we store the tileset images, and then we can use the code to reference the correct image, as well as lookup the tile size
+/*
+    This will be where we store the tileset images, and then we can use
+    the code to reference the correct image, as well as lookup the tile size.
+*/
 const tilesLibrary = [
     { code: 0, name: 'grass', image: loadImage('img/grass.png'), width: 64, height: 32 },
     { code: 1, name: 'road', image: loadImage('img/road.png'), width: 64, height: 32 },
@@ -46,22 +66,38 @@ const map = [
     [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0], // row 15
 ];
 
+/* Camera settings */
 let zoomLevel = 1;
 let panX = 0;
 let panY = 0;
+
+/* Used to track if we are panning */
 let panningInterval;
+
+/*
+    Used to track the directions in which the camera will pan.
+
+    We need to track multiple direction in case the user wants
+    to pan diagonally by holding down two arrow keys at once.
+*/
 const activePanningDirections = [];
 
+/* Checks whether an image has been loaded by the browser */
 const imageHasLoaded = (img) => {
   return img.complete && img.naturalHeight !== 0;
 };
 
+/*
+    A reference for the drawMap function that is
+    in the code in multiple locations
+*/
 let drawMap;
 
 const canvas = document.getElementById('map');
 const ctx = canvas.getContext('2d');
 
 
+/* Resizes the canvas so that it always fits within the window */
 function resizeCanvas() {
     // Get the dimensions of the browser window
     const windowWidth = window.innerWidth;
@@ -84,9 +120,13 @@ function resizeCanvas() {
 }
 
 // Call the resizeCanvas function initially and when the window is resized
-
 window.addEventListener('resize', resizeCanvas);
 
+/*
+    This function draws the map onto the canvas.
+    It calculates the position of each tile based on the map data,
+    the zoom level, and the pan offsets.
+*/
 drawMap = () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     const offsetX = mapWidth * (BASE_TILE_WIDTH / 2) * zoomLevel - (BASE_TILE_WIDTH / 2) * zoomLevel;
@@ -108,6 +148,10 @@ drawMap = () => {
     }
 }
 
+/*
+    When the user pressed a keyboard key down, we will check what key it is,
+    and execute any action that is linked to that key.
+*/
 document.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowLeft' && !activePanningDirections.includes('left')) {
         // Start panning left
@@ -131,12 +175,22 @@ document.addEventListener('keydown', (e) => {
         drawMap();
     } else if (e.key === '0') {
         // Reset zoom to 1
-        // TODO - center the map
         zoomLevel = 1;
+        drawMap();
+    } else if (e.key === 'c') {
+        // Center the map
+        panX = 0;
+        panY = 0;
         drawMap();
     }
 });
 
+/*
+    When the user releases a keyboard key, we will check what key it is,
+    and execute any action that is linked to that key.
+
+    This is useful for stopping panning when the user releases the arrow keys.
+*/
 document.addEventListener('keyup', (e) => {
     if (e.key === 'ArrowLeft') {
         // Stop panning left
@@ -153,6 +207,13 @@ document.addEventListener('keyup', (e) => {
     }
 });
 
+/* * Start panning in a specific direction
+    * @param {string} direction - The direction to pan ('left', 'right', 'up', 'down')
+    * This function starts an interval that pans the map in the specified direction.
+    * If the interval is already running, it will not start a new one.
+    * 
+    * // TODO - implement use of requestAnimationFrame instead of setInterval
+*/
 function startPanning(direction) {
     const panSpeed = 10; // Adjust the panning speed as needed
     activePanningDirections.push(direction);
@@ -167,17 +228,20 @@ function startPanning(direction) {
                     // We move 1/2 the speed in the y direction because 
                     // then when we do diagonal scrolling, it matches the 
                     // isometric tile ratio better.
-                    // Also - wondering if pan speed for all directions should be connected to zoom level ?
                     panY += panSpeed / 2;
                 } else if (dir === 'down') {
                     panY -= panSpeed / 2;
                 }
             }
             drawMap();
-        }, 16); // 60 frames per second
+        }, (1000 / 60));
     }
 }
 
+/* Stop panning in a specific direction
+    * @param {string} direction - The direction to stop panning ('left', 'right', 'up', 'down')
+    * This function stops the panning interval for the specified direction.
+*/
 function stopPanning(direction) {
     const index = activePanningDirections.indexOf(direction);
     if (index !== -1) {
@@ -189,6 +253,7 @@ function stopPanning(direction) {
     }
 }
 
+/* Load the map when all of the images are ready to be rendered */
 function loadMapWhenReady() {
     if (tilesLibrary.every(t => imageHasLoaded(t.image))) {
         resizeCanvas();
@@ -198,4 +263,5 @@ function loadMapWhenReady() {
     }
 }
 
+/* This triggers rendering the map */
 loadMapWhenReady();
