@@ -269,6 +269,44 @@ canvas.addEventListener('wheel', (e) => {
     drawMap();
 }, { passive: false });
 
+canvas.addEventListener('click', (e) => {
+    // Get canvas bounding rect and mouse position relative to canvas
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = (e.clientX - rect.left);
+    const mouseY = (e.clientY - rect.top);
+
+    // Calculate map offset as in drawMap
+    const offsetX = mapWidth * (BASE_TILE_WIDTH / 2) * zoomLevel - (BASE_TILE_WIDTH / 2) * zoomLevel;
+    const mapWidthPixels = mapWidth * BASE_TILE_WIDTH * zoomLevel;
+    const mapHeightPixels = mapHeight * BASE_TILE_HEIGHT * zoomLevel;
+    const centerX = canvas.width / 2 + offsetX;
+    const centerY = canvas.height / 2;
+    const mapX = centerX - mapWidthPixels / 2 + panX;
+    const mapY = centerY - mapHeightPixels / 2 + panY;
+
+    // Convert mouse position to map coordinates
+    const relX = mouseX - mapX;
+    const relY = mouseY - mapY;
+
+    // Inverse isometric transform
+    const tileW = BASE_TILE_WIDTH * zoomLevel;
+    const tileH = BASE_TILE_HEIGHT * zoomLevel;
+    let col = Math.floor((relX / (tileW / 2) + relY / (tileH / 2)) / 2);
+    let row = Math.floor((relY / (tileH / 2) - relX / (tileW / 2)) / 2);
+
+    // Clamp to map bounds
+    if (col < 0 || col >= mapWidth || row < 0 || row >= mapHeight) {
+        console.log('Clicked outside map');
+        return;
+    }
+
+    // Almost perfect detects the tile clicked on, but we need to adjust for the isometric projection
+    map[row][col] = 3;
+    drawMap();
+    console.log(`Clicked map row: ${row}, column: ${col}`);
+});
+
+
 /* Load the map when all of the images are ready to be rendered */
 function loadMapWhenReady() {
     if (tilesLibrary.every(t => imageHasLoaded(t.image))) {
