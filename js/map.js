@@ -253,6 +253,22 @@ function stopPanning(direction) {
     }
 }
 
+/*
+    Listen to mousewheel events to zoom in and out.
+*/
+canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const zoomFactor = 1.1;
+    if (e.deltaY < 0) {
+        // Zoom in
+        zoomLevel *= zoomFactor;
+    } else {
+        // Zoom out
+        zoomLevel /= zoomFactor;
+    }
+    drawMap();
+}, { passive: false });
+
 /* Load the map when all of the images are ready to be rendered */
 function loadMapWhenReady() {
     if (tilesLibrary.every(t => imageHasLoaded(t.image))) {
