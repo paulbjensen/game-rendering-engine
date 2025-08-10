@@ -37,6 +37,16 @@ const loadImage = (src) => {
     return image;
 };
 
+const loadJSON = (url) => {
+    return fetch(url)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        });
+};
+
 /*
     This will be where we store the tileset images, and then we can use
     the code to reference the correct image, as well as lookup the tile size.
@@ -48,23 +58,11 @@ const tilesLibrary = [
     { code: 3, name: 'dot', image: loadImage('img/dot.png'), width: 64, height: 64 },
 ];
 
-const map = [
-    [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0], // row 1
-    [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0], // row 2
-    [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0], // row 3
-    [0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0], // row 4
-    [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0], // row 5
-    [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0], // row 6
-    [1, 1, 3, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1, 1, 1], // row 7
-    [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0], // row 8
-    [0, 0, 0, 0, 0, 0, 0, 1, 0, 2, 2, 0, 0, 0, 0], // row 9
-    [0, 0, 0, 0, 0, 0, 0, 1, 0, 2, 2, 0, 0, 0, 0], // row 10
-    [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0], // row 11
-    [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0], // row 12
-    [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0], // row 13
-    [0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0], // row 14
-    [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0], // row 15
-];
+// Load the map data from a JSON file
+let map;
+(async () => {
+    map = await loadJSON('/data/map.json');
+})();
 
 /* Camera settings */
 let zoomLevel = 1;
@@ -291,8 +289,8 @@ canvas.addEventListener('click', (e) => {
     // Inverse isometric transform
     const tileW = BASE_TILE_WIDTH * zoomLevel;
     const tileH = BASE_TILE_HEIGHT * zoomLevel;
-    let col = Math.floor((relX / (tileW / 2) + relY / (tileH / 2)) / 2);
-    let row = Math.floor((relY / (tileH / 2) - relX / (tileW / 2)) / 2);
+    const col = Math.floor((relX / (tileW / 2) + relY / (tileH / 2)) / 2);
+    const row = Math.floor((relY / (tileH / 2) - relX / (tileW / 2)) / 2);
 
     // Clamp to map bounds
     if (col < 0 || col >= mapWidth || row < 0 || row >= mapHeight) {
@@ -309,7 +307,10 @@ canvas.addEventListener('click', (e) => {
 
 /* Load the map when all of the images are ready to be rendered */
 function loadMapWhenReady() {
-    if (tilesLibrary.every(t => imageHasLoaded(t.image))) {
+    const tilesLoaded = tilesLibrary.every(t => imageHasLoaded(t.image));
+    const mapLoaded = map && map.length > 0;
+
+    if (tilesLoaded && mapLoaded) {
         resizeCanvas();
         drawMap();
     } else {
