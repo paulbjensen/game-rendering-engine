@@ -1,0 +1,27 @@
+{
+  "name": "game-rendering-engine",
+  "version": "1.0.0",
+  "description": "An isometric game rendering engine",
+  "keywords": [
+    "isometric"
+  ],
+  "homepage": "https://github.com/paulbjensen/game-rendering-engine#readme",
+  "bugs": {
+    "url": "https://github.com/paulbjensen/game-rendering-engine/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/paulbjensen/game-rendering-engine.git"
+  },
+  "license": "MIT",
+  "author": "Paul Jensen",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "vite": "^7.1.2"
+  }
+}

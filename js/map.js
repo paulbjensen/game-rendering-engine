@@ -267,7 +267,101 @@ canvas.addEventListener('wheel', (e) => {
     drawMap();
 }, { passive: false });
 
+
+/* 
+    GitHub Copilot wrote this - I described what I wanted, and it managed to 
+    produce a solution that worked nicely. This is a nice timesaver, and 
+    gives me a warm fuzzy feeling of enjoying programming.
+*/
+let isDragging = false;
+let lastMouseX = 0;
+let lastMouseY = 0;
+let velocityX = 0;
+let velocityY = 0;
+let momentumAnimationFrame = null;
+
+/*
+    This is used to prevent click events from firing when dragging
+
+    At the moment it has the side effect of prevent the click event from 
+    firing, but that's not a big issue right now. I'm just enjoying being 
+    able to put together a PoC quite quickly.
+*/
+let suppressClick;
+
+/* This is used to intercept the mousedown event for when dragging starts */
+canvas.addEventListener('mousedown', (e) => {
+    suppressClick = true;
+    isDragging = true;
+    const rect = canvas.getBoundingClientRect();
+    lastMouseX = e.clientX - rect.left;
+    lastMouseY = e.clientY - rect.top;
+    velocityX = 0;
+    velocityY = 0;
+    if (momentumAnimationFrame) {
+        cancelAnimationFrame(momentumAnimationFrame);
+        momentumAnimationFrame = null;
+    }
+});
+
+/* We start tracking mouse movement for the dragging */
+canvas.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    const dx = mouseX - lastMouseX;
+    const dy = mouseY - lastMouseY;
+    panX += dx;
+    panY += dy;
+    velocityX = dx;
+    velocityY = dy;
+    lastMouseX = mouseX;
+    lastMouseY = mouseY;
+    drawMap();
+});
+
+/*
+    Stop tracking mouse movement when dragging ends, but still apply a nice
+    velocity effect on the map, so that it continues to move.
+*/
+canvas.addEventListener('mouseup', () => {
+    isDragging = false;
+    const friction = 0.95;
+    function applyMomentum() {
+        velocityX *= friction;
+        velocityY *= friction;
+        panX += velocityX;
+        panY += velocityY;
+        drawMap();
+        if (Math.abs(velocityX) > 0.5 || Math.abs(velocityY) > 0.5) {
+            momentumAnimationFrame = requestAnimationFrame(applyMomentum);
+        } else {
+            momentumAnimationFrame = null;
+        }
+    }
+    if (Math.abs(velocityX) > 0.5 || Math.abs(velocityY) > 0.5) {
+        applyMomentum();
+    }
+});
+
+/*
+    This is used to intercept the mouseleave event for when dragging ends.
+
+    Curious to find out the need for this on both the mouseup and 
+    mouseleave events.
+*/
+canvas.addEventListener('mouseleave', () => {
+    isDragging = false;
+});
+
+// NOTE - clicks are not triggering, but we do have mouse dragging to move around the canvas at the moment
 canvas.addEventListener('click', (e) => {
+    if (suppressClick) {
+        suppressClick = false;
+        return;
+    }
+
     // Get canvas bounding rect and mouse position relative to canvas
     const rect = canvas.getBoundingClientRect();
     const mouseX = (e.clientX - rect.left);
