@@ -2,14 +2,14 @@
     A helper function to load images in the browser without needing
     to render them in the page yet
 */
-const loadImage = (src) => {
+const loadImage = (src: string) => {
     const image = new Image();
     image.src = src;
     return image;
 };
 
 /* A helper function to load JSON data from a URL */
-const loadJSON = (url) => {
+const loadJSON = (url: string) => {
     return fetch(url)
         .then(response => {
             if (!response.ok) {
@@ -20,7 +20,7 @@ const loadJSON = (url) => {
 };
 
 /* Checks whether an image has been loaded by the browser */
-const imageHasLoaded = (img) => {
+const imageHasLoaded = (img:HTMLImageElement) => {
     return img.complete && img.naturalHeight !== 0;
 };
 
