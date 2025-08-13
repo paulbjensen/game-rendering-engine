@@ -9,6 +9,13 @@ const tilesLibrary = [
     { code: 1, name: 'road', image: loadImage('img/road.png'), width: 64, height: 32 },
     { code: 2, name: 'water', image: loadImage('img/water.png'), width: 64, height: 32 },
     { code: 3, name: 'dot', image: loadImage('img/dot.png'), width: 64, height: 64 },
+    { code: 4, name: 'dot-only', image: loadImage('img/dot-only.png'), width: 64, height: 64 },
+    { code: 5, name: 'water-round-top', image: loadImage('img/water-round-top.png'), width: 64, height: 32 },
+    { code: 6, name: 'water-round-left', image: loadImage('img/water-round-left.png'), width: 64, height: 32 },
+    { code: 7, name: 'water-round-bottom', image: loadImage('img/water-round-bottom.png'), width: 64, height: 32 },
+    { code: 8, name: 'water-round-right', image: loadImage('img/water-round-right.png'), width: 64, height: 32 },
+    { code: 9, name: 'road-with-markings-tl-br', image: loadImage('img/road-with-markings-tl-br.png'), width: 64, height: 32 },
+    { code: 10, name: 'road-with-markings-bl-tr', image: loadImage('img/road-with-markings-bl-tr.png'), width: 64, height: 32 },
 ];
 
 // Load the map data from a JSON file
