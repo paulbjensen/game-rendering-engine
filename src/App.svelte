@@ -3,6 +3,8 @@
     import { imageHasLoaded, } from './utils';
     import { map, tilesLibrary, mapWidth, mapHeight, BASE_TILE_WIDTH, BASE_TILE_HEIGHT } from './mapAndTiles';
 
+    type Direction = 'up' | 'down' | 'left' | 'right';
+
     onMount(async () => {
         /*
             Create an isometric tile map in the game world using HTML5 canvas.
@@ -11,8 +13,6 @@
             especially characters and clicking on objects?
         */
 
-        // Set the aspect ratio for the canvas
-        const aspectRatio = 2; // Adjust this value as needed
 
         /* Camera settings */
         let zoomLevel = 1;
@@ -28,7 +28,7 @@
             We need to track multiple direction in case the user wants
             to pan diagonally by holding down two arrow keys at once.
         */
-        const activePanningDirections: string[] = [];
+        const activePanningDirections: Direction[] = [];
 
 
         /*
@@ -44,10 +44,11 @@
             throw new Error('Canvas element not found');
         }
 
-        const ctx = canvas.getContext('2d');
-
         /* Resizes the canvas so that it always fits within the window */
         function resizeCanvas() {
+            // Set the aspect ratio for the canvas
+            const aspectRatio = 2; // Adjust this value as needed
+
             // Get the dimensions of the browser window
             const windowWidth = window.innerWidth;
             const windowHeight = window.innerHeight;
@@ -65,7 +66,7 @@
             // Set the canvas size
             canvas.width = canvasWidth;
             canvas.height = canvasHeight;
-            if (drawMap) drawMap();
+            drawMap?.();
         }
 
         // Call the resizeCanvas function initially and when the window is resized
@@ -77,6 +78,11 @@
             the zoom level, and the pan offsets.
         */
         drawMap = () => {
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                console.error('Failed to get canvas context');
+                return;
+            }
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             const offsetX = mapWidth * (BASE_TILE_WIDTH / 2) * zoomLevel - (BASE_TILE_WIDTH / 2) * zoomLevel;
             const mapWidthPixels = mapWidth * BASE_TILE_WIDTH * zoomLevel;
@@ -90,6 +96,12 @@
                 for (let column = 0; column < mapHeight; column++) {
                     const tileCode = map[row][column];
                     const tile = tilesLibrary.find(t => t.code === tileCode);
+                    /* 
+                        If the tile is not found, skip this iteration. 
+                        Continue is not a word I'd use for such an action, 
+                        but JS does.
+                    */
+                    if (!tile) continue;
                     const x = (column - row) * tile.width / 2 * zoomLevel + mapX;
                     const y = (column + row) * BASE_TILE_HEIGHT / 2 * zoomLevel + mapY - ((tile.height - BASE_TILE_HEIGHT) * zoomLevel);
                     ctx.drawImage(tile.image, 0, 0, tile.width, tile.height, x, y, tile.width * zoomLevel, tile.height * zoomLevel);
@@ -163,7 +175,7 @@
             * 
             * // TODO - implement use of requestAnimationFrame instead of setInterval
         */
-        function startPanning(direction) {
+        function startPanning(direction:Direction) {
             const panSpeed = 10; // Adjust the panning speed as needed
             activePanningDirections.push(direction);
             if (!panningInterval) {
@@ -182,7 +194,7 @@
                             panY -= panSpeed / 2;
                         }
                     }
-                    drawMap();
+                    drawMap?.();
                 }, (1000 / 60));
             }
         }
@@ -191,7 +203,7 @@
             * @param {string} direction - The direction to stop panning ('left', 'right', 'up', 'down')
             * This function stops the panning interval for the specified direction.
         */
-        function stopPanning(direction) {
+        function stopPanning(direction:Direction) {
             const index = activePanningDirections.indexOf(direction);
             if (index !== -1) {
                 activePanningDirections.splice(index, 1);
