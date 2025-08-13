@@ -47,6 +47,7 @@
         /* Resizes the canvas so that it always fits within the window */
         function resizeCanvas() {
             // Set the aspect ratio for the canvas
+            // NOTE - at some point we will want to architect the code to make this more efficient
             const aspectRatio = 2; // Adjust this value as needed
 
             // Get the dimensions of the browser window
@@ -78,6 +79,7 @@
             the zoom level, and the pan offsets.
         */
         drawMap = () => {
+            // NOTE - at some point we will want to architect the code to make this more efficient
             const ctx = canvas.getContext('2d');
             if (!ctx) {
                 console.error('Failed to get canvas context');
@@ -209,7 +211,7 @@
                 activePanningDirections.splice(index, 1);
             }
             if (activePanningDirections.length === 0) {
-                clearInterval(panningInterval);
+                if (panningInterval) clearInterval(panningInterval);
                 panningInterval = null;
             }
         }
@@ -241,7 +243,7 @@
         let lastMouseY = 0;
         let velocityX = 0;
         let velocityY = 0;
-        let momentumAnimationFrame = null;
+        let momentumAnimationFrame: number | null = null;
 
         /*
             This is used to prevent click events from firing when dragging
