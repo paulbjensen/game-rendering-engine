@@ -261,17 +261,20 @@
             firing, but that's not a big issue right now. I'm just enjoying being 
             able to put together a PoC quite quickly.
         */
-        let suppressClick;
+        let suppressClick = false;
+        let dragThreshold = 5; // pixels
+        let dragDistance = 0;
 
         /* This is used to intercept the mousedown event for when dragging starts */
         canvas.addEventListener('mousedown', (e) => {
-            suppressClick = true;
+            suppressClick = false;
             isDragging = true;
             const rect = canvas.getBoundingClientRect();
             lastMouseX = e.clientX - rect.left;
             lastMouseY = e.clientY - rect.top;
             velocityX = 0;
             velocityY = 0;
+            dragDistance = 0;
             if (momentumAnimationFrame) {
                 cancelAnimationFrame(momentumAnimationFrame);
                 momentumAnimationFrame = null;
@@ -292,6 +295,10 @@
             velocityY = dy;
             lastMouseX = mouseX;
             lastMouseY = mouseY;
+            dragDistance += Math.sqrt(dx * dx + dy * dy);
+            if (dragDistance > dragThreshold) {
+                suppressClick = true;
+            }
             drawMap();
         });
 
