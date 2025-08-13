@@ -24,5 +24,4 @@ const imageHasLoaded = (img) => {
     return img.complete && img.naturalHeight !== 0;
 };
 
-
 export { loadImage, loadJSON, imageHasLoaded }

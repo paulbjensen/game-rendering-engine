@@ -20,7 +20,7 @@
         let panY = 0;
 
         /* Used to track if we are panning */
-        let panningInterval;
+        let panningInterval: ReturnType<typeof setInterval> | null = null;
 
         /*
             Used to track the directions in which the camera will pan.
@@ -28,18 +28,23 @@
             We need to track multiple direction in case the user wants
             to pan diagonally by holding down two arrow keys at once.
         */
-        const activePanningDirections = [];
+        const activePanningDirections: string[] = [];
 
 
         /*
             A reference for the drawMap function that is
             in the code in multiple locations
         */
-        let drawMap;
+        let drawMap: (() => void) | null = null;
 
-        const canvas = document.getElementById('map');
+        const canvas = document.getElementById('map') as HTMLCanvasElement;
+
+        if (!canvas) {
+            console.error('Canvas element not found');
+            throw new Error('Canvas element not found');
+        }
+
         const ctx = canvas.getContext('2d');
-
 
         /* Resizes the canvas so that it always fits within the window */
         function resizeCanvas() {
@@ -286,7 +291,7 @@
                 velocityY *= friction;
                 panX += velocityX;
                 panY += velocityY;
-                drawMap();
+                drawMap?.();
                 if (Math.abs(velocityX) > 0.5 || Math.abs(velocityY) > 0.5) {
                     momentumAnimationFrame = requestAnimationFrame(applyMomentum);
                 } else {
@@ -359,7 +364,7 @@
 
             if (tilesLoaded && mapLoaded) {
                 resizeCanvas();
-                drawMap();
+                drawMap?.();
             } else {
                 setTimeout(loadMapWhenReady, 100);
             }
