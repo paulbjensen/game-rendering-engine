@@ -16,6 +16,9 @@ const tilesLibrary = [
     { code: 8, name: 'water-round-right', image: loadImage('img/water-round-right.png'), width: 64, height: 32 },
     { code: 9, name: 'road-with-markings-tl-br', image: loadImage('img/road-with-markings-tl-br.png'), width: 64, height: 32 },
     { code: 10, name: 'road-with-markings-bl-tr', image: loadImage('img/road-with-markings-bl-tr.png'), width: 64, height: 32 },
+    { code: 11, name: 'sand', image: loadImage('img/sand.png'), width: 64, height: 32 },
+    { code: 12, name: 'english-townhouse', image: loadImage('img/english-townhouse.png'), width: 64, height: 64 },
+    { code: 13, name: 'cornershop', image: loadImage('img/cornershop.png'), width: 64, height: 64 }
 ];
 
 // Load the map data from a JSON file
