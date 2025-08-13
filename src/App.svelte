@@ -2,6 +2,9 @@
     import { onMount } from 'svelte';
     import { imageHasLoaded, } from './utils';
     import { map, tilesLibrary, mapWidth, mapHeight, BASE_TILE_WIDTH, BASE_TILE_HEIGHT } from './mapAndTiles';
+    import {fps} from "@sveu/browser"
+
+    const fpsResult = fps();
 
     type Direction = 'up' | 'down' | 'left' | 'right';
 
@@ -392,6 +395,7 @@
 </style>
 
 <main>
+    <div id="fps-count">{$fpsResult} fps</div>
     <canvas id="map">
         Your browser does not support the canvas element.
     </canvas>

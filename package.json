@@ -15,7 +15,7 @@
   },
   "license": "MIT",
   "author": "Paul Jensen",
-	"type": "module",
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -33,6 +33,7 @@
     "vitest": "^3.2.4"
   },
   "dependencies": {
-    "@anephenix/event-emitter": "^0.0.10"
+    "@anephenix/event-emitter": "^0.0.10",
+    "@sveu/browser": "^1.0.1"
   }
 }
