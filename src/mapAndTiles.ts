@@ -41,7 +41,7 @@ const generateRandomMap = (numberOfRows:number, numberOfColumns:number) => {
 // const map = generateRandomMap(128,128);
 
 // Load the map data from a JSON file
-const map = await loadJSON('/data/64x64.json');
+const map = await loadJSON('/data/16x16.json');
 
 /*
     We define the map dimensions here to help with drawing 

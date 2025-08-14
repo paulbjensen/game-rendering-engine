@@ -49,27 +49,8 @@
 
         /* Resizes the canvas so that it always fits within the window */
         function resizeCanvas() {
-            // Set the aspect ratio for the canvas
-            // NOTE - at some point we will want to architect the code to make this more efficient
-            const aspectRatio = 2; // Adjust this value as needed
-
-            // Get the dimensions of the browser window
-            const windowWidth = window.innerWidth;
-            const windowHeight = window.innerHeight;
-
-            // Calculate the canvas width based on the aspect ratio
-            let canvasWidth = windowWidth;
-            let canvasHeight = windowWidth / aspectRatio;
-
-            // If the calculated height is larger than the window height, adjust the dimensions
-            if (canvasHeight > windowHeight) {
-                canvasHeight = windowHeight;
-                canvasWidth = windowHeight * aspectRatio;
-            }
-
-            // Set the canvas size
-            canvas.width = canvasWidth;
-            canvas.height = canvasHeight;
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
             drawMap?.();
         }
 
@@ -476,6 +457,11 @@
             // map[row][col] = 3;
             drawMap();
 
+            // TODO - have this draw in a 2nd layer above the main canvas
+
+            // 1 - canvas for the map
+            // 2 - for the mouse selection/hover/overlay 
+
             const ctx = canvas.getContext('2d');
             if (ctx) {
                 // let region = new Path2D();
@@ -525,7 +511,6 @@
             console.log(`Clicked map row: ${row}, column: ${col}`);
         });
 
-
         /* Load the map when all of the images are ready to be rendered */
         function loadMapWhenReady() {
             const tilesLoaded = tilesLibrary.every(t => imageHasLoaded(t.image));
@@ -533,7 +518,6 @@
 
             if (tilesLoaded && mapLoaded) {
                 resizeCanvas();
-                drawMap?.();
             } else {
                 setTimeout(loadMapWhenReady, 100);
             }
@@ -551,4 +535,9 @@
     <canvas id="map">
         Your browser does not support the canvas element.
     </canvas>
+    <div id="toolbar">
+        <button id="reset-view">Reset View</button>
+        <button id="zoom-in">Zoom In</button>
+        <button id="zoom-out">Zoom Out</button>
+    </div>
 </main>
