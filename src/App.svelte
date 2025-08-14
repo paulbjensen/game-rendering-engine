@@ -535,9 +535,9 @@
     <canvas id="map">
         Your browser does not support the canvas element.
     </canvas>
-    <div id="toolbar">
+    <!-- <div id="toolbar">
         <button id="reset-view">Reset View</button>
         <button id="zoom-in">Zoom In</button>
         <button id="zoom-out">Zoom Out</button>
-    </div>
+    </div> -->
 </main>
