@@ -21,15 +21,34 @@ const tilesLibrary = [
     { code: 13, name: 'cornershop', image: loadImage('img/cornershop.png'), width: 64, height: 64 }
 ];
 
+// TODO - we could move this into a Map class, which will allow us to load maps with different numbers of rows and columns, base_tile heights/widths (for more detailed maps), and either generate random maps or load from a file
+
+/*
+    Generates a map filled with random tiles - looks nuts but a good way to stress test the capabilities of the engine
+*/
+const generateRandomMap = (numberOfRows:number, numberOfColumns:number) => {
+    const newMap = [];
+    for (let i = 0; i < numberOfRows; i++) {
+        const row = [];
+        for (let j = 0; j < numberOfColumns; j++) {
+            const randomTile = Math.floor(Math.random() * tilesLibrary.length);
+            row.push([0,randomTile]);
+        }
+        newMap.push(row);
+    }
+    return newMap;
+}
+// const map = generateRandomMap(128,128);
+
 // Load the map data from a JSON file
-const map = await loadJSON('/data/map.json');
+const map = await loadJSON('/data/64x64.json');
 
 /*
     We define the map dimensions here to help with drawing 
     the map onto the canvas
 */
-const mapWidth = 15;
-const mapHeight = 15;
+const mapRows = map.length;
+const mapColumns = map[0].length;
 
 /*
     NOTE - these should be the default tile width and height values, 
@@ -39,4 +58,4 @@ const mapHeight = 15;
 const BASE_TILE_WIDTH = 64;
 const BASE_TILE_HEIGHT = 32;
 
-export { map, tilesLibrary, mapWidth, mapHeight, BASE_TILE_WIDTH, BASE_TILE_HEIGHT };
+export { map, tilesLibrary, mapRows, mapColumns, BASE_TILE_WIDTH, BASE_TILE_HEIGHT };

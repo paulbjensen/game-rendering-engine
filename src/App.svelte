@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import { imageHasLoaded, } from './utils';
-    import { map, tilesLibrary, mapWidth, mapHeight, BASE_TILE_WIDTH, BASE_TILE_HEIGHT } from './mapAndTiles';
+    import { map, tilesLibrary, mapRows, mapColumns, BASE_TILE_WIDTH, BASE_TILE_HEIGHT } from './mapAndTiles';
     import {fps} from "@sveu/browser"
 
     const fpsResult = fps();
@@ -88,12 +88,16 @@
                 console.error('Failed to get canvas context');
                 return;
             }
+            // let region = new Path2D();
+            // region.rect(0, 0, canvas.width, canvas.height);
+            // ctx.clip(region);
+
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             /* 
                 Calculate the offsets and dimensions for the map 
                 
-                (NOTE - mapWidth is 15 - maybe numColumns/numRows would be a better name for the variable)
+                (NOTE - mapRows is 15 - maybe numColumns/numRows would be a better name for the variable)
 
                 15 * (64 / 2) * zoomLevel - (64 / 2) * zoomLevel
                 15 * 32 * zoomLevel - 32 * zoomLevel
@@ -102,7 +106,7 @@
 
                 448px
             */
-            const offsetX = mapWidth * (BASE_TILE_WIDTH / 2) * zoomLevel - (BASE_TILE_WIDTH / 2) * zoomLevel;
+            const offsetX = mapRows * (BASE_TILE_WIDTH / 2) * zoomLevel - (BASE_TILE_WIDTH / 2) * zoomLevel;
 
             /*
                 15 * 64 * zoomLevel
@@ -111,7 +115,7 @@
 
                 960px
             */
-            const mapWidthPixels = mapWidth * BASE_TILE_WIDTH * zoomLevel;
+            const mapRowsPixels = mapRows * BASE_TILE_WIDTH * zoomLevel;
 
             /*
                 15 * 32 * zoomLevel
@@ -120,7 +124,7 @@
 
                 480px
             */
-            const mapHeightPixels = mapHeight * BASE_TILE_HEIGHT * zoomLevel;
+            const mapColumnsPixels = mapColumns * BASE_TILE_HEIGHT * zoomLevel;
  
  
             /*
@@ -148,7 +152,7 @@
 
                 808px
             */
-            const mapX = centerX - mapWidthPixels / 2 + panX;
+            const mapX = centerX - mapRowsPixels / 2 + panX;
             
             /*
                 300px - (480 / 2) + panY (assume it is 0 for now)
@@ -157,11 +161,11 @@
 
                 60px
             */
-            const mapY = centerY - mapHeightPixels / 2 + panY;
+            const mapY = centerY - mapColumnsPixels / 2 + panY;
 
             // row is mapped to width, height to column
-            for (let row = 0; row < mapWidth; row++) {
-                for (let column = 0; column < mapHeight; column++) {
+            for (let row = 0; row < mapRows; row++) {
+                for (let column = 0; column < mapColumns; column++) {
 
                     // An array of arrays, it's nested by row, then by column
                     const tileCode = map[row][column];
@@ -442,15 +446,15 @@
             const mouseY = (e.clientY - rect.top);
 
             // Calculate map offset as in drawMap
-            const offsetX = mapWidth * (BASE_TILE_WIDTH / 2) * zoomLevel - (BASE_TILE_WIDTH / 2) * zoomLevel;
-            const offsetY = mapHeight * (BASE_TILE_HEIGHT / 2) * zoomLevel - (BASE_TILE_HEIGHT / 2) * zoomLevel;
-            const mapWidthPixels = mapWidth * BASE_TILE_WIDTH * zoomLevel;
-            const mapHeightPixels = mapHeight * BASE_TILE_HEIGHT * zoomLevel;
+            const offsetX = mapRows * (BASE_TILE_WIDTH / 2) * zoomLevel - (BASE_TILE_WIDTH / 2) * zoomLevel;
+            const offsetY = mapColumns * (BASE_TILE_HEIGHT / 2) * zoomLevel - (BASE_TILE_HEIGHT / 2) * zoomLevel;
+            const mapRowsPixels = mapRows * BASE_TILE_WIDTH * zoomLevel;
+            const mapColumnsPixels = mapColumns * BASE_TILE_HEIGHT * zoomLevel;
             const centerX = canvas.width / 2 + offsetX;
             const centerY = canvas.height / 2;
-            const mapX = centerX - mapWidthPixels / 2 + panX;
-            const mapY = centerY - mapHeightPixels / 2 + panY;
-            // console.log({ offsetX, offsetY, mapWidthPixels, mapHeightPixels, centerX, centerY, mapX, mapY});
+            const mapX = centerX - mapRowsPixels / 2 + panX;
+            const mapY = centerY - mapColumnsPixels / 2 + panY;
+            // console.log({ offsetX, offsetY, mapRowsPixels, mapColumnsPixels, centerX, centerY, mapX, mapY});
 
             // Convert mouse position to map coordinates
             const relX = mouseX - mapX;
@@ -463,7 +467,7 @@
             const row = Math.floor((relY / (tileH / 2) - relX / (tileW / 2)) / 2);
 
             // Clamp to map bounds
-            // if (col < 0 || col >= mapWidth || row < 0 || row >= mapHeight) {
+            // if (col < 0 || col >= mapRows || row < 0 || row >= mapColumns) {
             //     console.log('Clicked outside map');
             //     return;
             // }
@@ -474,6 +478,9 @@
 
             const ctx = canvas.getContext('2d');
             if (ctx) {
+                // let region = new Path2D();
+                // region.rect(0, 0, canvas.width, canvas.height);
+                // ctx.clip(region);
 
                 // ctx.save();
                 // ctx.font = '16px Arial';
