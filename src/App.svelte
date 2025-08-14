@@ -257,6 +257,65 @@
             }
         });
 
+        /*
+            Touch controls for panning and zooming on mobile/tablet devices.
+        */
+        let lastTouchX = 0;
+        let lastTouchY = 0;
+        let lastTouchDistance = 0;
+        let isTouchPanning = false;
+
+        canvas.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 1) {
+                // Single finger: start panning
+                isTouchPanning = true;
+                const rect = canvas.getBoundingClientRect();
+                lastTouchX = e.touches[0].clientX - rect.left;
+                lastTouchY = e.touches[0].clientY - rect.top;
+            } else if (e.touches.length === 2) {
+                // Two fingers: start zooming
+                isTouchPanning = false;
+                const dx = e.touches[0].clientX - e.touches[1].clientX;
+                const dy = e.touches[0].clientY - e.touches[1].clientY;
+                lastTouchDistance = Math.sqrt(dx * dx + dy * dy);
+            }
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            if (e.touches.length === 1 && isTouchPanning) {
+                // Panning
+                const touchX = e.touches[0].clientX - rect.left;
+                const touchY = e.touches[0].clientY - rect.top;
+                const dx = touchX - lastTouchX;
+                const dy = touchY - lastTouchY;
+                panX += dx;
+                panY += dy;
+                lastTouchX = touchX;
+                lastTouchY = touchY;
+                drawMap?.();
+            } else if (e.touches.length === 2) {
+                // Pinch zoom
+                const dx = e.touches[0].clientX - e.touches[1].clientX;
+                const dy = e.touches[0].clientY - e.touches[1].clientY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                if (lastTouchDistance) {
+                    const zoomFactor = distance / lastTouchDistance;
+                    zoomLevel *= zoomFactor;
+                    drawMap?.();
+                }
+                lastTouchDistance = distance;
+            }
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', (e) => {
+            if (e.touches.length === 0) {
+                isTouchPanning = false;
+                lastTouchDistance = 0;
+            }
+        });
+
         /* * Start panning in a specific direction
             * @param {string} direction - The direction to pan ('left', 'right', 'up', 'down')
             * This function starts an interval that pans the map in the specified direction.
