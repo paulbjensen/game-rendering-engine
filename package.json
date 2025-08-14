@@ -17,15 +17,20 @@
   "author": "Paul Jensen",
   "type": "module",
   "scripts": {
+    "analyze": "size-limit --why",
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "size": "size-limit"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.1.4",
+    "@size-limit/esbuild-why": "^11.2.0",
+    "@size-limit/file": "^11.2.0",
     "@sveltejs/vite-plugin-svelte": "^6.1.1",
     "@tsconfig/svelte": "^5.0.4",
     "husky": "^9.1.7",
+    "size-limit": "^11.2.0",
     "svelte": "^5.38.1",
     "svelte-check": "^4.3.1",
     "typescript": "^5.9.2",
@@ -35,5 +40,12 @@
   "dependencies": {
     "@anephenix/event-emitter": "^0.0.10",
     "@sveu/browser": "^1.0.1"
-  }
+  },
+  "size-limit": [
+    {
+      "path": "dist/**/*.js",
+      "brotli": true,
+      "limit": "100 KB"
+    }
+  ]
 }
