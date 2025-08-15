@@ -2,11 +2,17 @@
     import { onMount } from 'svelte';
     import { imageHasLoaded, } from './utils';
     import { map, tilesLibrary, mapRows, mapColumns, BASE_TILE_WIDTH, BASE_TILE_HEIGHT } from './mapAndTiles';
-    import {fps} from "@sveu/browser"
+    import { fps } from "@sveu/browser"
+    import type { Direction } from './types';
+    import eventEmitter from './eventEmitter';
 
     const fpsResult = fps();
 
-    type Direction = 'up' | 'down' | 'left' | 'right';
+    /* Camera settings */
+    let zoomLevel = 1;
+    let panX = 0;
+    let panY = 0;
+
 
     onMount(async () => {
         /*
@@ -16,11 +22,22 @@
             especially characters and clicking on objects?
         */
 
+        /* Track mouse */
+        let mouseX = 0;
+        let mouseY = 0;
 
-        /* Camera settings */
-        let zoomLevel = 1;
-        let panX = 0;
-        let panY = 0;
+        function trackMousePosition(e: MouseEvent | null) {
+            if (!e) {
+                mouseX = 0;
+                mouseY = 0;
+                return;
+            }
+            // Get canvas bounding rect and mouse position relative to canvas
+            const rect = cursorCanvas?.getBoundingClientRect();
+            if (!rect) return;
+            mouseX = (e.clientX - rect.left);
+            mouseY = (e.clientY - rect.top);
+        }
 
         /* Used to track if we are panning */
         let panningInterval: ReturnType<typeof setInterval> | null = null;
@@ -33,38 +50,87 @@
         */
         const activePanningDirections: Direction[] = [];
 
-
         /*
             A reference for the drawMap function that is
             in the code in multiple locations
         */
-        let drawMap: (() => void) | null = null;
+        let drawMap: ((ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => void) | null = null;
+        let drawCursor: (() => void) | null = null;
 
-        const canvas = document.getElementById('map') as HTMLCanvasElement;
+        const mapCanvas = document.getElementById('map') as HTMLCanvasElement;
+        const cursorCanvas = document.getElementById('cursor') as HTMLCanvasElement;
 
-        if (!canvas) {
-            console.error('Canvas element not found');
-            throw new Error('Canvas element not found');
+        if (!mapCanvas || !cursorCanvas) {
+            const message = 'One of the canvas elements was not found';
+            console.error(message);
+            throw new Error(message);
         }
+
+
+        // Create the offline map, and draw it later
+        const offscreen = document.getElementById('fullscale-offscreen-map') as HTMLCanvasElement;
+        offscreen.width = mapRows * BASE_TILE_WIDTH;
+        offscreen.height = mapColumns * BASE_TILE_HEIGHT;
+
+        function resampleMap() {
+            const ctx = mapCanvas.getContext('2d');
+            if (!ctx) return;
+            ctx.clearRect(0, 0, mapCanvas.width, mapCanvas.height);
+
+            // Calculate source width/height based on zoom
+            const srcWidth = offscreen.width / zoomLevel;
+            const srcHeight = offscreen.height / zoomLevel;
+
+            // Calculate destination size to match aspect ratio
+            const srcAspect = srcWidth / srcHeight;
+            let destWidth = mapCanvas.width;
+            let destHeight = mapCanvas.height;
+
+            if (destWidth / destHeight > srcAspect) {
+            // Canvas is wider than source: fit height
+            destWidth = destHeight * srcAspect;
+            } else {
+            // Canvas is taller than source: fit width
+            destHeight = destWidth / srcAspect;
+            }
+
+            // Center the image in the canvas
+            const dx = (mapCanvas.width - destWidth) / 2;
+            const dy = (mapCanvas.height - destHeight) / 2;
+
+            ctx.drawImage(
+            offscreen,
+            panX, panY, srcWidth, srcHeight,
+            dx, dy, destWidth, destHeight
+            );
+        }
+
+
+
+
 
         /* Resizes the canvas so that it always fits within the window */
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            drawMap?.();
+        function resizeCanvases() {
+            mapCanvas.width = window.innerWidth;
+            mapCanvas.height = window.innerHeight;
+            cursorCanvas.width = window.innerWidth;
+            cursorCanvas.height = window.innerHeight;
+            const ctxOff = offscreen.getContext('2d');
+            drawMap?.(ctxOff, offscreen);
+            resampleMap();
         }
 
-        // Call the resizeCanvas function initially and when the window is resized
-        window.addEventListener('resize', resizeCanvas);
+        // Call the resizeCanvases function initially and when the window is resized
+        window.addEventListener('resize', resizeCanvases);
 
         /*
             This function draws the map onto the canvas.
             It calculates the position of each tile based on the map data,
             the zoom level, and the pan offsets.
         */
-        drawMap = () => {
+        drawMap = (ctx, canvas) => {
             // NOTE - at some point we will want to architect the code to make this more efficient
-            const ctx = canvas.getContext('2d');
+
             if (!ctx) {
                 console.error('Failed to get canvas context');
                 return;
@@ -87,7 +153,7 @@
 
                 448px
             */
-            const offsetX = mapRows * (BASE_TILE_WIDTH / 2) * zoomLevel - (BASE_TILE_WIDTH / 2) * zoomLevel;
+            const offsetX = mapRows * (BASE_TILE_WIDTH / 2) - (BASE_TILE_WIDTH / 2);
 
             /*
                 15 * 64 * zoomLevel
@@ -96,7 +162,7 @@
 
                 960px
             */
-            const mapRowsPixels = mapRows * BASE_TILE_WIDTH * zoomLevel;
+            const mapRowsPixels = mapRows * BASE_TILE_WIDTH;
 
             /*
                 15 * 32 * zoomLevel
@@ -105,7 +171,7 @@
 
                 480px
             */
-            const mapColumnsPixels = mapColumns * BASE_TILE_HEIGHT * zoomLevel;
+            const mapColumnsPixels = mapColumns * BASE_TILE_HEIGHT;
  
  
             /*
@@ -133,7 +199,7 @@
 
                 808px
             */
-            const mapX = centerX - mapRowsPixels / 2 + panX;
+            const mapX = centerX - mapRowsPixels / 2;
             
             /*
                 300px - (480 / 2) + panY (assume it is 0 for now)
@@ -142,7 +208,7 @@
 
                 60px
             */
-            const mapY = centerY - mapColumnsPixels / 2 + panY;
+            const mapY = centerY - mapColumnsPixels / 2;
 
             // row is mapped to width, height to column
             for (let row = 0; row < mapRows; row++) {
@@ -156,9 +222,9 @@
                             const tile = tilesLibrary.find(t => t.code === code);
                             if (!tile) continue;
 
-                            const x = (column - row) * tile.width / 2 * zoomLevel + mapX;
-                            const y = (column + row) * BASE_TILE_HEIGHT / 2 * zoomLevel + mapY - ((tile.height - BASE_TILE_HEIGHT) * zoomLevel);
-                            ctx.drawImage(tile.image, 0, 0, tile.width, tile.height, x, y, tile.width * zoomLevel, tile.height * zoomLevel);
+                            const x = (column - row) * tile.width / 2 + mapX;
+                            const y = (column + row) * BASE_TILE_HEIGHT / 2 + mapY - ((tile.height - BASE_TILE_HEIGHT));
+                            ctx.drawImage(tile.image, 0, 0, tile.width, tile.height, x, y, tile.width, tile.height);
                         }
                         continue; // Skip to the next column
                     } else {
@@ -170,17 +236,13 @@
                         */
                         if (!tile) continue;
 
-
                         /* 
                             x is the column minus the row (why?) multiplied by half the tile width, multiplied by the zoom level and mapX added to it
                         */
-                        const x = (column - row) * tile.width / 2 * zoomLevel + mapX;
-                        const y = (column + row) * BASE_TILE_HEIGHT / 2 * zoomLevel + mapY - ((tile.height - BASE_TILE_HEIGHT) * zoomLevel);
-                        ctx.drawImage(tile.image, 0, 0, tile.width, tile.height, x, y, tile.width * zoomLevel, tile.height * zoomLevel);
-
+                        const x = (column - row) * tile.width / 2 + mapX;
+                        const y = (column + row) * BASE_TILE_HEIGHT / 2 + mapY - ((tile.height - BASE_TILE_HEIGHT));
+                        ctx.drawImage(tile.image, 0, 0, tile.width, tile.height, x, y, tile.width, tile.height);
                     }
-
-
 
                     // Text debugging for what column and row we are rendering from the map json array (0-indexed)
                     // ctx.font = '10px Arial';
@@ -205,33 +267,27 @@
         document.addEventListener('keydown', (e) => {
             if (e.key === 'ArrowLeft' && !activePanningDirections.includes('left')) {
                 // Start panning left
-                startPanning('left');
+                eventEmitter.emit('startPanning', 'left');
             } else if (e.key === 'ArrowRight' && !activePanningDirections.includes('right')) {
                 // Start panning right
-                startPanning('right');
+                eventEmitter.emit('startPanning', 'right');
             } else if (e.key === 'ArrowUp' && !activePanningDirections.includes('up')) {
                 // Start panning up
-                startPanning('up');
+                eventEmitter.emit('startPanning', 'up');
             } else if (e.key === 'ArrowDown' && !activePanningDirections.includes('down')) {
                 // Start panning down
-                startPanning('down');
+                eventEmitter.emit('startPanning', 'down');
             } else if (e.key === '-') {
-                // Zoom out
-                zoomLevel /= 1.1; // You can adjust the zoom factor as needed
-                drawMap();
+                eventEmitter.emit('zoomOut');
             } else if (e.key === '=') {
                 // Zoom in
-                zoomLevel *= 1.1; // You can adjust the zoom factor as needed
-                drawMap();
+                eventEmitter.emit('zoomIn');
             } else if (e.key === '0') {
                 // Reset zoom to 1
-                zoomLevel = 1;
-                drawMap();
+                eventEmitter.emit('resetZoom');
             } else if (e.key === 'c') {
                 // Center the map
-                panX = 0;
-                panY = 0;
-                drawMap();
+                eventEmitter.emit('recenter');
             }
         });
 
@@ -244,16 +300,16 @@
         document.addEventListener('keyup', (e) => {
             if (e.key === 'ArrowLeft') {
                 // Stop panning left
-                stopPanning('left');
+                eventEmitter.emit('stopPanning', 'left');
             } else if (e.key === 'ArrowRight') {
                 // Stop panning right
-                stopPanning('right');
+                eventEmitter.emit('stopPanning', 'right');
             } else if (e.key === 'ArrowUp') {
                 // Stop panning up
-                stopPanning('up');
+                eventEmitter.emit('stopPanning', 'up');
             } else if (e.key === 'ArrowDown') {
                 // Stop panning down
-                stopPanning('down');
+                eventEmitter.emit('stopPanning', 'down');
             }
         });
 
@@ -265,11 +321,11 @@
         let lastTouchDistance = 0;
         let isTouchPanning = false;
 
-        canvas.addEventListener('touchstart', (e) => {
+        mapCanvas.addEventListener('touchstart', (e) => {
             if (e.touches.length === 1) {
                 // Single finger: start panning
                 isTouchPanning = true;
-                const rect = canvas.getBoundingClientRect();
+                const rect = mapCanvas.getBoundingClientRect();
                 lastTouchX = e.touches[0].clientX - rect.left;
                 lastTouchY = e.touches[0].clientY - rect.top;
             } else if (e.touches.length === 2) {
@@ -281,9 +337,9 @@
             }
         });
 
-        canvas.addEventListener('touchmove', (e) => {
+        mapCanvas.addEventListener('touchmove', (e) => {
             e.preventDefault();
-            const rect = canvas.getBoundingClientRect();
+            const rect = mapCanvas.getBoundingClientRect();
             if (e.touches.length === 1 && isTouchPanning) {
                 // Panning
                 const touchX = e.touches[0].clientX - rect.left;
@@ -294,7 +350,7 @@
                 panY += dy;
                 lastTouchX = touchX;
                 lastTouchY = touchY;
-                drawMap?.();
+                resampleMap?.();
             } else if (e.touches.length === 2) {
                 // Pinch zoom
                 const dx = e.touches[0].clientX - e.touches[1].clientX;
@@ -303,13 +359,13 @@
                 if (lastTouchDistance) {
                     const zoomFactor = distance / lastTouchDistance;
                     zoomLevel *= zoomFactor;
-                    drawMap?.();
+                    resampleMap?.();
                 }
                 lastTouchDistance = distance;
             }
         }, { passive: false });
 
-        canvas.addEventListener('touchend', (e) => {
+        mapCanvas.addEventListener('touchend', (e) => {
             if (e.touches.length === 0) {
                 isTouchPanning = false;
                 lastTouchDistance = 0;
@@ -342,7 +398,8 @@
                             panY -= panSpeed / 2;
                         }
                     }
-                    drawMap?.();
+                    resampleMap?.();
+                    drawCursor?.();
                 }, (1000 / 60));
             }
         }
@@ -362,20 +419,44 @@
             }
         }
 
+        // TODO - eventually change these to perform scale/transform operations on the map, rather than redraw it in its entirety
+
+        function zoomIn() {
+            zoomLevel *= 1.1; // Adjust the zoom factor as needed
+            resampleMap?.();
+            drawCursor?.();
+        }
+
+        function zoomOut() {
+            zoomLevel /= 1.1; // Adjust the zoom factor as needed
+            resampleMap?.();
+            drawCursor?.();
+        }
+
+        function resetZoom() {
+            zoomLevel = 1;
+            resampleMap?.();
+            drawCursor?.();
+        }
+
+        function recenter() {
+            panX = 0;
+            panY = 0;
+            resampleMap?.();
+            drawCursor?.();
+        }
+
         /*
             Listen to mousewheel events to zoom in and out.
         */
-        canvas.addEventListener('wheel', (e) => {
+        mapCanvas.addEventListener('wheel', (e) => {
             e.preventDefault();
-            const zoomFactor = 1.1;
             if (e.deltaY < 0) {
-                // Zoom in
-                zoomLevel *= zoomFactor;
+                eventEmitter.emit('zoomIn');
             } else {
-                // Zoom out
-                zoomLevel /= zoomFactor;
+                eventEmitter.emit('zoomOut');
             }
-            drawMap();
+            resampleMap?.();
         }, { passive: false });
 
 
@@ -403,10 +484,10 @@
         let dragDistance = 0;
 
         /* This is used to intercept the mousedown event for when dragging starts */
-        canvas.addEventListener('mousedown', (e) => {
+        mapCanvas.addEventListener('mousedown', (e) => {
             suppressClick = false;
             isDragging = true;
-            const rect = canvas.getBoundingClientRect();
+            const rect = mapCanvas.getBoundingClientRect();
             lastMouseX = e.clientX - rect.left;
             lastMouseY = e.clientY - rect.top;
             velocityX = 0;
@@ -419,9 +500,9 @@
         });
 
         /* We start tracking mouse movement for the dragging */
-        canvas.addEventListener('mousemove', (e) => {
+        mapCanvas.addEventListener('mousemove', (e) => {
             if (!isDragging) return;
-            const rect = canvas.getBoundingClientRect();
+            const rect = mapCanvas.getBoundingClientRect();
             const mouseX = e.clientX - rect.left;
             const mouseY = e.clientY - rect.top;
             const dx = mouseX - lastMouseX;
@@ -436,14 +517,14 @@
             if (dragDistance > dragThreshold) {
                 suppressClick = true;
             }
-            drawMap();
+            resampleMap?.();
         });
 
         /*
             Stop tracking mouse movement when dragging ends, but still apply a nice
             velocity effect on the map, so that it continues to move.
         */
-        canvas.addEventListener('mouseup', () => {
+        mapCanvas.addEventListener('mouseup', () => {
             isDragging = false;
             const friction = 0.95;
             function applyMomentum() {
@@ -451,7 +532,7 @@
                 velocityY *= friction;
                 panX += velocityX;
                 panY += velocityY;
-                drawMap?.();
+                resampleMap?.();
                 if (Math.abs(velocityX) > 0.5 || Math.abs(velocityY) > 0.5) {
                     momentumAnimationFrame = requestAnimationFrame(applyMomentum);
                 } else {
@@ -469,29 +550,23 @@
             Curious to find out the need for this on both the mouseup and 
             mouseleave events.
         */
-        canvas.addEventListener('mouseleave', () => {
+        mapCanvas.addEventListener('mouseleave', () => {
             isDragging = false;
         });
 
-        // NOTE - clicks are not triggering, but we do have mouse dragging to move around the canvas at the moment
-        canvas.addEventListener('mousemove', (e) => {
+        drawCursor = () => {
             if (suppressClick) {
                 suppressClick = false;
                 return;
             }
-
-            // Get canvas bounding rect and mouse position relative to canvas
-            const rect = canvas.getBoundingClientRect();
-            const mouseX = (e.clientX - rect.left);
-            const mouseY = (e.clientY - rect.top);
 
             // Calculate map offset as in drawMap
             const offsetX = mapRows * (BASE_TILE_WIDTH / 2) * zoomLevel - (BASE_TILE_WIDTH / 2) * zoomLevel;
             const offsetY = mapColumns * (BASE_TILE_HEIGHT / 2) * zoomLevel - (BASE_TILE_HEIGHT / 2) * zoomLevel;
             const mapRowsPixels = mapRows * BASE_TILE_WIDTH * zoomLevel;
             const mapColumnsPixels = mapColumns * BASE_TILE_HEIGHT * zoomLevel;
-            const centerX = canvas.width / 2 + offsetX;
-            const centerY = canvas.height / 2;
+            const centerX = cursorCanvas.width / 2 + offsetX;
+            const centerY = cursorCanvas.height / 2;
             const mapX = centerX - mapRowsPixels / 2 + panX;
             const mapY = centerY - mapColumnsPixels / 2 + panY;
             // console.log({ offsetX, offsetY, mapRowsPixels, mapColumnsPixels, centerX, centerY, mapX, mapY});
@@ -506,38 +581,13 @@
             const col = Math.floor((relX / (tileW / 2) + relY / (tileH / 2)) / 2);
             const row = Math.floor((relY / (tileH / 2) - relX / (tileW / 2)) / 2);
 
-            // Clamp to map bounds
-            // if (col < 0 || col >= mapRows || row < 0 || row >= mapColumns) {
-            //     console.log('Clicked outside map');
-            //     return;
-            // }
+            // TODO - trigger the redraw if the column and row value changes - (it will be recalculated on each mousemove, but we don't need to render the selector if it hasn't changed the column and row)
+            // NOTE - We will also need to trigger this whenever we change the pan/zoom values on the map as well - otherwise the grid calculation is detached from the map.
 
-            // Almost perfect detects the tile clicked on, but we need to adjust for the isometric projection
-            // map[row][col] = 3;
-            drawMap();
-
-            // TODO - have this draw in a 2nd layer above the main canvas
-
-            // 1 - canvas for the map
-            // 2 - for the mouse selection/hover/overlay 
-
-            const ctx = canvas.getContext('2d');
+            const ctx = cursorCanvas.getContext('2d');
             if (ctx) {
-                // let region = new Path2D();
-                // region.rect(0, 0, canvas.width, canvas.height);
-                // ctx.clip(region);
+                ctx.clearRect(0, 0, cursorCanvas.width, cursorCanvas.height);
 
-                // ctx.save();
-                // ctx.font = '16px Arial';
-                // ctx.fillStyle = 'yellow';
-                // ctx.strokeStyle = 'black';
-                // ctx.lineWidth = 2;
-                // const text = `relX: ${relX.toFixed(1)}, relY: ${relY.toFixed(1)}, col: ${col}, row: ${row}`;
-                // const textX = mouseX + 10;
-                // const textY = mouseY + 100;
-                // ctx.strokeText(text, textX, textY);
-                // ctx.fillText(text, textX, textY);
-                // ctx.restore();
 
                 ctx.save();
                 ctx.strokeStyle = 'white';
@@ -568,6 +618,12 @@
             }
 
             console.log(`Clicked map row: ${row}, column: ${col}`);
+        }
+
+        // NOTE - clicks are not triggering, but we do have mouse dragging to move around the canvas at the moment
+        cursorCanvas.addEventListener('mousemove', (e) => {
+            trackMousePosition(e);
+            drawCursor();
         });
 
         /* Load the map when all of the images are ready to be rendered */
@@ -576,24 +632,68 @@
             const mapLoaded = map && map.length > 0;
 
             if (tilesLoaded && mapLoaded) {
-                resizeCanvas();
+                resizeCanvases();
             } else {
                 setTimeout(loadMapWhenReady, 100);
             }
         }
 
         loadMapWhenReady();
+
+
+
+        // Event bindings are here
+
+        eventEmitter.on('startPanning', (direction) => {
+            console.log(`Started panning ${direction}`);
+            startPanning(direction);
+        });
+
+        eventEmitter.on('stopPanning', (direction) => {
+            console.log(`Stopped panning ${direction}`);
+            stopPanning(direction);
+        });
+
+        eventEmitter.on('zoomIn', () => {
+            console.log(`Zooming in`);
+            zoomIn();
+        });
+
+        eventEmitter.on('zoomOut', () => {
+            console.log(`Zooming out`);
+            zoomOut();
+        });
+
+        eventEmitter.on('resetZoom', () => {
+            console.log(`Resetting zoom`);
+            resetZoom();
+        });
+
+        eventEmitter.on('recenter', () => {
+            console.log(`Recentering`);
+            recenter();
+        });
+
     });
+
 </script>
 
 <style>
 </style>
 
 <main>
-    <div id="fps-count">{$fpsResult} fps</div>
-    <canvas id="map">
+    <canvas id="fullscale-offscreen-map">
         Your browser does not support the canvas element.
     </canvas>
+    <div id="canvas-layers">
+
+        <canvas id="map" style:transform={`translate(${panX}px, ${panY}px) scale(${zoomLevel})`}>
+        </canvas>
+        <canvas id="cursor">
+        </canvas>
+    </div>
+    <div id="fps-count">{$fpsResult} fps</div>
+
     <!-- <div id="toolbar">
         <button id="reset-view">Reset View</button>
         <button id="zoom-in">Zoom In</button>
