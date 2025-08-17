@@ -27,18 +27,18 @@ const tilesLibrary = [
 /*
     Generates a map filled with random tiles - looks nuts but a good way to stress test the capabilities of the engine
 */
-const generateRandomMap = (numberOfRows:number, numberOfColumns:number) => {
-    const newMap = [];
-    for (let i = 0; i < numberOfRows; i++) {
-        const row = [];
-        for (let j = 0; j < numberOfColumns; j++) {
-            const randomTile = Math.floor(Math.random() * tilesLibrary.length);
-            row.push([0,randomTile]);
-        }
-        newMap.push(row);
-    }
-    return newMap;
-}
+// const generateRandomMap = (numberOfRows:number, numberOfColumns:number) => {
+//     const newMap = [];
+//     for (let i = 0; i < numberOfRows; i++) {
+//         const row = [];
+//         for (let j = 0; j < numberOfColumns; j++) {
+//             const randomTile = Math.floor(Math.random() * tilesLibrary.length);
+//             row.push([0,randomTile]);
+//         }
+//         newMap.push(row);
+//     }
+//     return newMap;
+// }
 // const map = generateRandomMap(128,128);
 
 // Load the map data from a JSON file

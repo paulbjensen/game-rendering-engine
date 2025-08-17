@@ -1,12 +1,40 @@
 <script lang="ts">
-    import { onMount } from 'svelte';
+    import { onDestroy, onMount } from 'svelte';
     import { imageHasLoaded, } from './utils';
     import { map, tilesLibrary, mapRows, mapColumns, BASE_TILE_WIDTH, BASE_TILE_HEIGHT } from './mapAndTiles';
     import {fps} from "@sveu/browser"
     import type { Direction } from './types';
     import eventEmitter from './eventEmitter';
-    
+    import Camera from './Camera';
+    import Keyboard, { type KeyboardOptions} from './Keyboard';
+
     const fpsResult = fps();
+
+    const camera = new Camera();
+
+    // Keyboard controls specified here
+    const keyboardOptions: KeyboardOptions = {
+        keydown: {
+            'ArrowUp': () => eventEmitter.emit('startPanning', 'up'),
+            'ArrowDown': () => eventEmitter.emit('startPanning', 'down'),
+            'ArrowLeft': () => eventEmitter.emit('startPanning', 'left'),
+            'ArrowRight': () => eventEmitter.emit('startPanning', 'right'),
+            '=': () => eventEmitter.emit('zoomIn'),
+            '-': () => eventEmitter.emit('zoomOut'),
+            '0': () => eventEmitter.emit('resetZoom'),
+            'c': () => eventEmitter.emit('recenter')
+        },
+        keyup: {
+            'ArrowUp': () => eventEmitter.emit('stopPanning', 'up'),
+            'ArrowDown': () => eventEmitter.emit('stopPanning', 'down'),
+            'ArrowLeft': () => eventEmitter.emit('stopPanning', 'left'),
+            'ArrowRight': () => eventEmitter.emit('stopPanning', 'right'),
+        }
+    } ;
+
+    // Attach the keyboard event listeners
+    const keyboard = new Keyboard(keyboardOptions);
+    keyboard.attach();
 
     onMount(async () => {
         /*
@@ -18,9 +46,7 @@
 
 
         /* Camera settings */
-        let zoomLevel = 1;
-        let panX = 0;
-        let panY = 0;
+
 
         /* Used to track if we are panning */
         let panningInterval: ReturnType<typeof setInterval> | null = null;
@@ -87,7 +113,7 @@
 
                 448px
             */
-            const offsetX = mapRows * (BASE_TILE_WIDTH / 2) * zoomLevel - (BASE_TILE_WIDTH / 2) * zoomLevel;
+            const offsetX = mapRows * (BASE_TILE_WIDTH / 2) * camera.zoomLevel - (BASE_TILE_WIDTH / 2) * camera.zoomLevel;
 
             /*
                 15 * 64 * zoomLevel
@@ -96,7 +122,7 @@
 
                 960px
             */
-            const mapRowsPixels = mapRows * BASE_TILE_WIDTH * zoomLevel;
+            const mapRowsPixels = mapRows * BASE_TILE_WIDTH * camera.zoomLevel;
 
             /*
                 15 * 32 * zoomLevel
@@ -105,8 +131,7 @@
 
                 480px
             */
-            const mapColumnsPixels = mapColumns * BASE_TILE_HEIGHT * zoomLevel;
- 
+            const mapColumnsPixels = mapColumns * BASE_TILE_HEIGHT * camera.zoomLevel;
  
             /*
                 Assume canvas width is 1200px in this example
@@ -133,7 +158,7 @@
 
                 808px
             */
-            const mapX = centerX - mapRowsPixels / 2 + panX;
+            const mapX = centerX - mapRowsPixels / 2 + camera.panX;
             
             /*
                 300px - (480 / 2) + panY (assume it is 0 for now)
@@ -142,7 +167,7 @@
 
                 60px
             */
-            const mapY = centerY - mapColumnsPixels / 2 + panY;
+            const mapY = centerY - mapColumnsPixels / 2 + camera.panY;
 
             // row is mapped to width, height to column
             for (let row = 0; row < mapRows; row++) {
@@ -156,9 +181,9 @@
                             const tile = tilesLibrary.find(t => t.code === code);
                             if (!tile) continue;
 
-                            const x = (column - row) * tile.width / 2 * zoomLevel + mapX;
-                            const y = (column + row) * BASE_TILE_HEIGHT / 2 * zoomLevel + mapY - ((tile.height - BASE_TILE_HEIGHT) * zoomLevel);
-                            ctx.drawImage(tile.image, 0, 0, tile.width, tile.height, x, y, tile.width * zoomLevel, tile.height * zoomLevel);
+                            const x = (column - row) * tile.width / 2 * camera.zoomLevel + mapX;
+                            const y = (column + row) * BASE_TILE_HEIGHT / 2 * camera.zoomLevel + mapY - ((tile.height - BASE_TILE_HEIGHT) * camera.zoomLevel);
+                            ctx.drawImage(tile.image, 0, 0, tile.width, tile.height, x, y, tile.width * camera.zoomLevel, tile.height * camera.zoomLevel);
                         }
                         continue; // Skip to the next column
                     } else {
@@ -174,9 +199,9 @@
                         /* 
                             x is the column minus the row (why?) multiplied by half the tile width, multiplied by the zoom level and mapX added to it
                         */
-                        const x = (column - row) * tile.width / 2 * zoomLevel + mapX;
-                        const y = (column + row) * BASE_TILE_HEIGHT / 2 * zoomLevel + mapY - ((tile.height - BASE_TILE_HEIGHT) * zoomLevel);
-                        ctx.drawImage(tile.image, 0, 0, tile.width, tile.height, x, y, tile.width * zoomLevel, tile.height * zoomLevel);
+                        const x = (column - row) * tile.width / 2 * camera.zoomLevel + mapX;
+                        const y = (column + row) * BASE_TILE_HEIGHT / 2 * camera.zoomLevel + mapY - ((tile.height - BASE_TILE_HEIGHT) * camera.zoomLevel);
+                        ctx.drawImage(tile.image, 0, 0, tile.width, tile.height, x, y, tile.width * camera.zoomLevel, tile.height * camera.zoomLevel);
 
                     }
 
@@ -196,53 +221,7 @@
                     // ctx.save();
                 }
             }
-        }
-
-        /*
-            When the user pressed a keyboard key down, we will check what key it is,
-            and execute any action that is linked to that key.
-        */
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowLeft') {
-                eventEmitter.emit('startPanning', 'left');
-            } else if (e.key === 'ArrowRight') {
-                eventEmitter.emit('startPanning', 'right');
-            } else if (e.key === 'ArrowUp') {
-                eventEmitter.emit('startPanning', 'up');
-            } else if (e.key === 'ArrowDown') {
-                eventEmitter.emit('startPanning', 'down');
-            } else if (e.key === '-') {
-                eventEmitter.emit('zoomOut');
-            } else if (e.key === '=') {
-                eventEmitter.emit('zoomIn');
-            } else if (e.key === '0') {
-                eventEmitter.emit('resetZoom');
-            } else if (e.key === 'c') {
-                eventEmitter.emit('recenter');
-            }
-        });
-
-        /*
-            When the user releases a keyboard key, we will check what key it is,
-            and execute any action that is linked to that key.
-
-            This is useful for stopping panning when the user releases the arrow keys.
-        */
-        document.addEventListener('keyup', (e) => {
-            if (e.key === 'ArrowLeft') {
-                // Stop panning left
-                eventEmitter.emit('stopPanning', 'left');
-            } else if (e.key === 'ArrowRight') {
-                // Stop panning right
-                eventEmitter.emit('stopPanning', 'right');
-            } else if (e.key === 'ArrowUp') {
-                // Stop panning up
-                eventEmitter.emit('stopPanning', 'up');
-            } else if (e.key === 'ArrowDown') {
-                // Stop panning down
-                eventEmitter.emit('stopPanning', 'down');
-            }
-        });
+        }    
 
         /*
             Touch controls for panning and zooming on mobile/tablet devices.
@@ -277,8 +256,7 @@
                 const touchY = e.touches[0].clientY - rect.top;
                 const dx = touchX - lastTouchX;
                 const dy = touchY - lastTouchY;
-                panX += dx;
-                panY += dy;
+                camera.addPan(dx, dy);
                 lastTouchX = touchX;
                 lastTouchY = touchY;
                 drawMap?.();
@@ -289,7 +267,7 @@
                 const distance = Math.sqrt(dx * dx + dy * dy);
                 if (lastTouchDistance) {
                     const zoomFactor = distance / lastTouchDistance;
-                    zoomLevel *= zoomFactor;
+                    camera.zoomLevel *= zoomFactor;
                     drawMap?.();
                 }
                 lastTouchDistance = distance;
@@ -319,16 +297,16 @@
                 panningInterval = setInterval(() => {
                     for (const dir of activePanningDirections) {
                         if (dir === 'left') {
-                            panX += panSpeed;
+                            camera.panX += panSpeed;
                         } else if (dir === 'right') {
-                            panX -= panSpeed;
+                            camera.panX -= panSpeed;
                         } else if (dir === 'up') {
                             // We move 1/2 the speed in the y direction because 
                             // then when we do diagonal scrolling, it matches the 
                             // isometric tile ratio better.
-                            panY += panSpeed / 2;
+                            camera.panY += panSpeed / 2;
                         } else if (dir === 'down') {
-                            panY -= panSpeed / 2;
+                            camera.panY -= panSpeed / 2;
                         }
                     }
                     drawMap?.();
@@ -408,8 +386,7 @@
             const mouseY = e.clientY - rect.top;
             const dx = mouseX - lastMouseX;
             const dy = mouseY - lastMouseY;
-            panX += dx;
-            panY += dy;
+            camera.addPan(dx, dy);
             velocityX = dx;
             velocityY = dy;
             lastMouseX = mouseX;
@@ -431,8 +408,7 @@
             function applyMomentum() {
                 velocityX *= friction;
                 velocityY *= friction;
-                panX += velocityX;
-                panY += velocityY;
+                camera.addPan(velocityX, velocityY);
                 drawMap?.();
                 if (Math.abs(velocityX) > 0.5 || Math.abs(velocityY) > 0.5) {
                     momentumAnimationFrame = requestAnimationFrame(applyMomentum);
@@ -468,14 +444,14 @@
             const mouseY = (e.clientY - rect.top);
 
             // Calculate map offset as in drawMap
-            const offsetX = mapRows * (BASE_TILE_WIDTH / 2) * zoomLevel - (BASE_TILE_WIDTH / 2) * zoomLevel;
-            const offsetY = mapColumns * (BASE_TILE_HEIGHT / 2) * zoomLevel - (BASE_TILE_HEIGHT / 2) * zoomLevel;
-            const mapRowsPixels = mapRows * BASE_TILE_WIDTH * zoomLevel;
-            const mapColumnsPixels = mapColumns * BASE_TILE_HEIGHT * zoomLevel;
+            const offsetX = mapRows * (BASE_TILE_WIDTH / 2) * camera.zoomLevel - (BASE_TILE_WIDTH / 2) * camera.zoomLevel;
+            const offsetY = mapColumns * (BASE_TILE_HEIGHT / 2) * camera.zoomLevel - (BASE_TILE_HEIGHT / 2) * camera.zoomLevel;
+            const mapRowsPixels = mapRows * BASE_TILE_WIDTH * camera.zoomLevel;
+            const mapColumnsPixels = mapColumns * BASE_TILE_HEIGHT * camera.zoomLevel;
             const centerX = canvas.width / 2 + offsetX;
             const centerY = canvas.height / 2;
-            const mapX = centerX - mapRowsPixels / 2 + panX;
-            const mapY = centerY - mapColumnsPixels / 2 + panY;
+            const mapX = centerX - mapRowsPixels / 2 + camera.panX;
+            const mapY = centerY - mapColumnsPixels / 2 + camera.panY;
             // console.log({ offsetX, offsetY, mapRowsPixels, mapColumnsPixels, centerX, centerY, mapX, mapY});
 
             // Convert mouse position to map coordinates
@@ -483,8 +459,8 @@
             const relY = mouseY - mapY; // Hmm, this value seems to adjust with scale 
 
             // Inverse isometric transform
-            const tileW = BASE_TILE_WIDTH * zoomLevel;
-            const tileH = BASE_TILE_HEIGHT * zoomLevel;
+            const tileW = BASE_TILE_WIDTH * camera.zoomLevel;
+            const tileH = BASE_TILE_HEIGHT * camera.zoomLevel;
             const col = Math.floor((relX / (tileW / 2) + relY / (tileH / 2)) / 2);
             const row = Math.floor((relY / (tileH / 2) - relX / (tileW / 2)) / 2);
 
@@ -526,10 +502,10 @@
                 ctx.lineWidth = 2;
                 // Calculate the top-left corner of the tile in screen coordinates
                 const tile = tilesLibrary.find(t => t.code === map[row][col]);
-                const tileWidth = 64 * zoomLevel;
-                const tileHeight = 32 * zoomLevel;
+                const tileWidth = 64 * camera.zoomLevel;
+                const tileHeight = 32 * camera.zoomLevel;
                 const x = (col - row) * tileWidth / 2 + mapX;
-                const y = (col + row) * tileHeight / 2 + mapY - ((tile?.height ? tile.height : BASE_TILE_HEIGHT) - BASE_TILE_HEIGHT) * zoomLevel;
+                const y = (col + row) * tileHeight / 2 + mapY - ((tile?.height ? tile.height : BASE_TILE_HEIGHT) - BASE_TILE_HEIGHT) * camera.zoomLevel;
 
                 // Draw diamond
                 ctx.beginPath();
@@ -564,40 +540,45 @@
             }
         }
 
+        // Zoom and centering functions
+
         function zoomOut () {
             // Zoom out
-            zoomLevel /= 1.1; // You can adjust the zoom factor as needed
+            camera.setZoom(camera.zoomLevel / 1.1);
             drawMap?.();
         }
 
         function zoomIn () {
             // Zoom in
-            zoomLevel *= 1.1; // You can adjust the zoom factor as needed
+            camera.setZoom(camera.zoomLevel * 1.1);
             drawMap?.();
         }
 
         function resetZoom() {
             // Reset zoom to 1
-            zoomLevel = 1;
+            camera.resetZoom();
             drawMap?.();
         }
 
         function recenter() {
             // Center the map
-            panX = 0;
-            panY = 0;
+            camera.resetPan();
             drawMap?.();
         }
 
         // EventEmitter bindings
-        eventEmitter.on('startPanning', (direction) => startPanning(direction));
-        eventEmitter.on('stopPanning', (direction) => stopPanning(direction));
+        eventEmitter.on('startPanning', startPanning);
+        eventEmitter.on('stopPanning', stopPanning);
         eventEmitter.on('zoomOut', zoomOut);
         eventEmitter.on('zoomIn', zoomIn);
         eventEmitter.on('resetZoom', resetZoom);
         eventEmitter.on('recenter', recenter);
 
         loadMapWhenReady();
+    });
+
+    onDestroy(() => {
+        keyboard.detach();
     });
 </script>
 
