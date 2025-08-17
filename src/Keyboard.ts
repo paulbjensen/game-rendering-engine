@@ -12,15 +12,26 @@ class Keyboard {
         keyCode, but let's cross that bridge when we get to it.
     */
 
+    /* binds the options for use in other function calls */
     constructor(options: KeyboardOptions) {
         this.options = options;
     }
 
+    /*
+        Attaches the keyboard event listeners.
+    */
     attach() {
         window.addEventListener('keydown', this.handleKeyDown);
         window.addEventListener('keyup', this.handleKeyUp);
     }
 
+    /*
+        Detaches the keyboard event listeners.
+
+        This is useful for whn you unmount a component, 
+        or when you need to disable keboard bindings because you've
+        switched to a different screen in an app or a mode.
+    */
     detach() {
         window.removeEventListener('keydown', this.handleKeyDown);
         window.removeEventListener('keyup', this.handleKeyUp);
