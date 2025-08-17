@@ -18,7 +18,8 @@ const tilesLibrary = [
     { code: 10, name: 'road-with-markings-bl-tr', image: loadImage('/img/road-with-markings-bl-tr.png'), width: 64, height: 32 },
     { code: 11, name: 'sand', image: loadImage('/img/sand.png'), width: 64, height: 32 },
     { code: 12, name: 'english-townhouse', image: loadImage('/img/english-townhouse.png'), width: 64, height: 64 },
-    { code: 13, name: 'cornershop', image: loadImage('/img/cornershop.png'), width: 64, height: 64 }
+    { code: 13, name: 'cornershop', image: loadImage('/img/cornershop.png'), width: 64, height: 64 },
+    { code: 14, name: 'house', image: loadImage('/img/house.png'), width: 64, height: 64 }
 ];
 
 // TODO - we could move this into a Map class, which will allow us to load maps with different numbers of rows and columns, base_tile heights/widths (for more detailed maps), and either generate random maps or load from a file

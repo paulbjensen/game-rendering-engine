@@ -3,10 +3,10 @@
     import { imageHasLoaded, } from './utils';
     import { map, tilesLibrary, mapRows, mapColumns, BASE_TILE_WIDTH, BASE_TILE_HEIGHT } from './mapAndTiles';
     import {fps} from "@sveu/browser"
-
+    import type { Direction } from './types';
+    import eventEmitter from './eventEmitter';
+    
     const fpsResult = fps();
-
-    type Direction = 'up' | 'down' | 'left' | 'right';
 
     onMount(async () => {
         /*
@@ -203,35 +203,22 @@
             and execute any action that is linked to that key.
         */
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowLeft' && !activePanningDirections.includes('left')) {
-                // Start panning left
-                startPanning('left');
-            } else if (e.key === 'ArrowRight' && !activePanningDirections.includes('right')) {
-                // Start panning right
-                startPanning('right');
-            } else if (e.key === 'ArrowUp' && !activePanningDirections.includes('up')) {
-                // Start panning up
-                startPanning('up');
-            } else if (e.key === 'ArrowDown' && !activePanningDirections.includes('down')) {
-                // Start panning down
-                startPanning('down');
+            if (e.key === 'ArrowLeft') {
+                eventEmitter.emit('startPanning', 'left');
+            } else if (e.key === 'ArrowRight') {
+                eventEmitter.emit('startPanning', 'right');
+            } else if (e.key === 'ArrowUp') {
+                eventEmitter.emit('startPanning', 'up');
+            } else if (e.key === 'ArrowDown') {
+                eventEmitter.emit('startPanning', 'down');
             } else if (e.key === '-') {
-                // Zoom out
-                zoomLevel /= 1.1; // You can adjust the zoom factor as needed
-                drawMap();
+                eventEmitter.emit('zoomOut');
             } else if (e.key === '=') {
-                // Zoom in
-                zoomLevel *= 1.1; // You can adjust the zoom factor as needed
-                drawMap();
+                eventEmitter.emit('zoomIn');
             } else if (e.key === '0') {
-                // Reset zoom to 1
-                zoomLevel = 1;
-                drawMap();
+                eventEmitter.emit('resetZoom');
             } else if (e.key === 'c') {
-                // Center the map
-                panX = 0;
-                panY = 0;
-                drawMap();
+                eventEmitter.emit('recenter');
             }
         });
 
@@ -244,16 +231,16 @@
         document.addEventListener('keyup', (e) => {
             if (e.key === 'ArrowLeft') {
                 // Stop panning left
-                stopPanning('left');
+                eventEmitter.emit('stopPanning', 'left');
             } else if (e.key === 'ArrowRight') {
                 // Stop panning right
-                stopPanning('right');
+                eventEmitter.emit('stopPanning', 'right');
             } else if (e.key === 'ArrowUp') {
                 // Stop panning up
-                stopPanning('up');
+                eventEmitter.emit('stopPanning', 'up');
             } else if (e.key === 'ArrowDown') {
                 // Stop panning down
-                stopPanning('down');
+                eventEmitter.emit('stopPanning', 'down');
             }
         });
 
@@ -324,6 +311,8 @@
             * // TODO - implement use of requestAnimationFrame instead of setInterval
         */
         function startPanning(direction:Direction) {
+            // Don't trigger if already panning in that direction
+            if (activePanningDirections.includes(direction)) return;
             const panSpeed = 10; // Adjust the panning speed as needed
             activePanningDirections.push(direction);
             if (!panningInterval) {
@@ -367,15 +356,8 @@
         */
         canvas.addEventListener('wheel', (e) => {
             e.preventDefault();
-            const zoomFactor = 1.1;
-            if (e.deltaY < 0) {
-                // Zoom in
-                zoomLevel *= zoomFactor;
-            } else {
-                // Zoom out
-                zoomLevel /= zoomFactor;
-            }
-            drawMap();
+            const action = e.deltaY < 0 ? 'zoomOut' : 'zoomIn';
+            eventEmitter.emit(action);
         }, { passive: false });
 
 
@@ -581,6 +563,39 @@
                 setTimeout(loadMapWhenReady, 100);
             }
         }
+
+        function zoomOut () {
+            // Zoom out
+            zoomLevel /= 1.1; // You can adjust the zoom factor as needed
+            drawMap?.();
+        }
+
+        function zoomIn () {
+            // Zoom in
+            zoomLevel *= 1.1; // You can adjust the zoom factor as needed
+            drawMap?.();
+        }
+
+        function resetZoom() {
+            // Reset zoom to 1
+            zoomLevel = 1;
+            drawMap?.();
+        }
+
+        function recenter() {
+            // Center the map
+            panX = 0;
+            panY = 0;
+            drawMap?.();
+        }
+
+        // EventEmitter bindings
+        eventEmitter.on('startPanning', (direction) => startPanning(direction));
+        eventEmitter.on('stopPanning', (direction) => stopPanning(direction));
+        eventEmitter.on('zoomOut', zoomOut);
+        eventEmitter.on('zoomIn', zoomIn);
+        eventEmitter.on('resetZoom', resetZoom);
+        eventEmitter.on('recenter', recenter);
 
         loadMapWhenReady();
     });
