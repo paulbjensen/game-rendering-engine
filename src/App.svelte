@@ -10,7 +10,7 @@
 
     const fpsResult = fps();
 
-    const camera = new Camera();
+    const camera = new Camera({eventEmitter});
 
     // Keyboard controls specified here
     const keyboardOptions: KeyboardOptions = {
@@ -46,19 +46,6 @@
 
 
         /* Camera settings */
-
-
-        /* Used to track if we are panning */
-        let panningInterval: ReturnType<typeof setInterval> | null = null;
-
-        /*
-            Used to track the directions in which the camera will pan.
-
-            We need to track multiple direction in case the user wants
-            to pan diagonally by holding down two arrow keys at once.
-        */
-        const activePanningDirections: Direction[] = [];
-
 
         /*
             A reference for the drawMap function that is
@@ -280,54 +267,6 @@
                 lastTouchDistance = 0;
             }
         });
-
-        /* * Start panning in a specific direction
-            * @param {string} direction - The direction to pan ('left', 'right', 'up', 'down')
-            * This function starts an interval that pans the map in the specified direction.
-            * If the interval is already running, it will not start a new one.
-            * 
-            * // TODO - implement use of requestAnimationFrame instead of setInterval
-        */
-        function startPanning(direction:Direction) {
-            // Don't trigger if already panning in that direction
-            if (activePanningDirections.includes(direction)) return;
-            const panSpeed = 10; // Adjust the panning speed as needed
-            activePanningDirections.push(direction);
-            if (!panningInterval) {
-                panningInterval = setInterval(() => {
-                    for (const dir of activePanningDirections) {
-                        if (dir === 'left') {
-                            camera.panX += panSpeed;
-                        } else if (dir === 'right') {
-                            camera.panX -= panSpeed;
-                        } else if (dir === 'up') {
-                            // We move 1/2 the speed in the y direction because 
-                            // then when we do diagonal scrolling, it matches the 
-                            // isometric tile ratio better.
-                            camera.panY += panSpeed / 2;
-                        } else if (dir === 'down') {
-                            camera.panY -= panSpeed / 2;
-                        }
-                    }
-                    drawMap?.();
-                }, (1000 / 60));
-            }
-        }
-
-        /* Stop panning in a specific direction
-            * @param {string} direction - The direction to stop panning ('left', 'right', 'up', 'down')
-            * This function stops the panning interval for the specified direction.
-        */
-        function stopPanning(direction:Direction) {
-            const index = activePanningDirections.indexOf(direction);
-            if (index !== -1) {
-                activePanningDirections.splice(index, 1);
-            }
-            if (activePanningDirections.length === 0) {
-                if (panningInterval) clearInterval(panningInterval);
-                panningInterval = null;
-            }
-        }
 
         /*
             Listen to mousewheel events to zoom in and out.
@@ -566,20 +505,21 @@
             drawMap?.();
         }
 
+
         // EventEmitter bindings
-        eventEmitter.on('startPanning', startPanning);
-        eventEmitter.on('stopPanning', stopPanning);
+        eventEmitter.on('startPanning', camera.startPanning);
+        eventEmitter.on('stopPanning', camera.stopPanning);
         eventEmitter.on('zoomOut', zoomOut);
         eventEmitter.on('zoomIn', zoomIn);
         eventEmitter.on('resetZoom', resetZoom);
         eventEmitter.on('recenter', recenter);
+        eventEmitter.on('cameraUpdated', drawMap);
 
         loadMapWhenReady();
     });
 
-    onDestroy(() => {
-        keyboard.detach();
-    });
+    // When unmounting the component
+    onDestroy(keyboard.detach);
 </script>
 
 <style>

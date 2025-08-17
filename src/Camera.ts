@@ -1,13 +1,30 @@
-class Camera {
+import type EventEmitter from '@anephenix/event-emitter';
+import type { Direction } from './types';
 
+class Camera {
     zoomLevel: number;
     panX: number;
     panY: number;
+    activePanningDirections: Direction[];
+    panningInterval: ReturnType<typeof setInterval> | null;
+    eventEmitter: InstanceType<typeof EventEmitter>;
 
-    constructor() {
+    constructor({eventEmitter}: {eventEmitter: InstanceType<typeof EventEmitter>}) {
+        this.eventEmitter = eventEmitter;
         this.zoomLevel = 1;
         this.panX = 0;
         this.panY = 0;
+           /* Used to track if we are panning */
+        this.panningInterval = null;
+        /*
+            Used to track the directions in which the camera will pan.
+
+            We need to track multiple direction in case the user wants
+            to pan diagonally by holding down two arrow keys at once.
+        */
+        this.activePanningDirections = [];
+        this.startPanning = this.startPanning.bind(this);
+        this.stopPanning = this.stopPanning.bind(this);
     }
 
     /*
@@ -57,6 +74,62 @@ class Camera {
     resetPan() {
         this.panX = 0;
         this.panY = 0;
+    }
+
+    /*
+        * Start panning in a specific direction
+        * @param {string} direction - The direction to pan ('left', 'right', 'up', 'down')
+        * This function starts an interval that pans the map in the specified direction.
+        * If the interval is already running, it will not start a new one.
+        *
+        * // TODO - implement use of requestAnimationFrame instead of setInterval
+        */
+     startPanning(direction:Direction) {
+        // Don't trigger if already panning in that direction
+        if (this.activePanningDirections.includes(direction)) return;
+        const panSpeed = 10; // Adjust the panning speed as needed
+        this.activePanningDirections.push(direction);
+
+        if (!this.panningInterval) {
+            this.panningInterval = setInterval(() => {
+                for (const dir of this.activePanningDirections) {
+                    if (dir === 'left') {
+                        this.panX += panSpeed;
+                    } else if (dir === 'right') {
+                        this.panX -= panSpeed;
+                    } else if (dir === 'up') {
+                        // We move 1/2 the speed in the y direction because 
+                        // then when we do diagonal scrolling, it matches the 
+                        // isometric tile ratio better.
+                        this.panY += panSpeed / 2;
+                    } else if (dir === 'down') {
+                        this.panY -= panSpeed / 2;
+                    }
+                }
+                // - TODO - this is where we call drawMap
+                this.eventEmitter.emit('cameraUpdated', { panX: this.panX, panY: this.panY, zoomLevel: this.zoomLevel });
+                /*
+                     NOTE - we assume the hooks complete before the next call 
+                     in the loop is executed - nothing here prevents it from 
+                     running on beyond the next frame call.
+                */
+            }, (1000 / 60));
+        }
+    }
+
+    /* Stop panning in a specific direction
+        * @param {string} direction - The direction to stop panning ('left', 'right', 'up', 'down')
+        * This function stops the panning interval for the specified direction.
+    */
+    stopPanning(direction:Direction) {
+        const index = this.activePanningDirections.indexOf(direction);
+        if (index !== -1) {
+            this.activePanningDirections.splice(index, 1);
+        }
+        if (this.activePanningDirections.length === 0) {
+            if (this.panningInterval) clearInterval(this.panningInterval);
+            this.panningInterval = null;
+        }
     }
 }
 
