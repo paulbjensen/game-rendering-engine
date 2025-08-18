@@ -5,13 +5,15 @@
     import {fps} from "@sveu/browser"
     import eventEmitter from './eventEmitter';
     import Camera from './Camera';
-    import Keyboard, { type KeyboardOptions} from './Keyboard';
-    import Touch from './Touch';
+    import Keyboard, { type KeyboardOptions} from './controls/Keyboard';
+    import Touch from './controls/Touch';
+    import Mouse from './controls/Mouse';
 
     const fpsResult = fps();
 
-    const camera = new Camera({eventEmitter});
+    const camera = new Camera({ eventEmitter });
     const touch = new Touch({ eventEmitter });
+    const mouse = new Mouse({ eventEmitter });
 
     // Keyboard controls specified here
     const keyboardOptions: KeyboardOptions = {
@@ -50,6 +52,7 @@
 
         const canvas = document.getElementById('map') as HTMLCanvasElement;
         touch.attach(canvas);
+        mouse.attach(canvas);
 
         if (!canvas) {
             console.error('Canvas element not found');
@@ -194,206 +197,7 @@
                     // ctx.save();
                 }
             }
-        }    
-
-        /*
-            Listen to mousewheel events to zoom in and out.
-        */
-        canvas.addEventListener('wheel', (e) => {
-            e.preventDefault();
-            const action = e.deltaY < 0 ? 'zoomOut' : 'zoomIn';
-            eventEmitter.emit(action);
-        }, { passive: false });
-
-
-        /* 
-            GitHub Copilot wrote this - I described what I wanted, and it managed to 
-            produce a solution that worked nicely. This is a nice timesaver, and 
-            gives me a warm fuzzy feeling of enjoying programming.
-        */
-        let isDragging = false;
-        let lastMouseX = 0;
-        let lastMouseY = 0;
-        let velocityX = 0;
-        let velocityY = 0;
-        let momentumAnimationFrame: number | null = null;
-
-        /*
-            This is used to prevent click events from firing when dragging
-
-            At the moment it has the side effect of prevent the click event from 
-            firing, but that's not a big issue right now. I'm just enjoying being 
-            able to put together a PoC quite quickly.
-        */
-        let suppressClick = false;
-        let dragThreshold = 5; // pixels
-        let dragDistance = 0;
-
-        /* This is used to intercept the mousedown event for when dragging starts */
-        canvas.addEventListener('mousedown', (e) => {
-            suppressClick = false;
-            isDragging = true;
-            const rect = canvas.getBoundingClientRect();
-            lastMouseX = e.clientX - rect.left;
-            lastMouseY = e.clientY - rect.top;
-            velocityX = 0;
-            velocityY = 0;
-            dragDistance = 0;
-            if (momentumAnimationFrame) {
-                cancelAnimationFrame(momentumAnimationFrame);
-                momentumAnimationFrame = null;
-            }
-        });
-
-        /* We start tracking mouse movement for the dragging */
-        canvas.addEventListener('mousemove', (e) => {
-            if (!isDragging) return;
-            const rect = canvas.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left;
-            const mouseY = e.clientY - rect.top;
-            const dx = mouseX - lastMouseX;
-            const dy = mouseY - lastMouseY;
-            camera.addPan(dx, dy);
-            velocityX = dx;
-            velocityY = dy;
-            lastMouseX = mouseX;
-            lastMouseY = mouseY;
-            dragDistance += Math.sqrt(dx * dx + dy * dy);
-            if (dragDistance > dragThreshold) {
-                suppressClick = true;
-            }
-            drawMap();
-        });
-
-        /*
-            Stop tracking mouse movement when dragging ends, but still apply a nice
-            velocity effect on the map, so that it continues to move.
-        */
-        canvas.addEventListener('mouseup', () => {
-            isDragging = false;
-            const friction = 0.95;
-            function applyMomentum() {
-                velocityX *= friction;
-                velocityY *= friction;
-                camera.addPan(velocityX, velocityY);
-                drawMap?.();
-                if (Math.abs(velocityX) > 0.5 || Math.abs(velocityY) > 0.5) {
-                    momentumAnimationFrame = requestAnimationFrame(applyMomentum);
-                } else {
-                    momentumAnimationFrame = null;
-                }
-            }
-            if (Math.abs(velocityX) > 0.5 || Math.abs(velocityY) > 0.5) {
-                applyMomentum();
-            }
-        });
-
-        /*
-            This is used to intercept the mouseleave event for when dragging ends.
-
-            Curious to find out the need for this on both the mouseup and 
-            mouseleave events.
-        */
-        canvas.addEventListener('mouseleave', () => {
-            isDragging = false;
-        });
-
-        // NOTE - clicks are not triggering, but we do have mouse dragging to move around the canvas at the moment
-        canvas.addEventListener('mousemove', (e) => {
-            if (suppressClick) {
-                suppressClick = false;
-                return;
-            }
-
-            // Get canvas bounding rect and mouse position relative to canvas
-            const rect = canvas.getBoundingClientRect();
-            const mouseX = (e.clientX - rect.left);
-            const mouseY = (e.clientY - rect.top);
-
-            // Calculate map offset as in drawMap
-            const offsetX = mapRows * (BASE_TILE_WIDTH / 2) * camera.zoomLevel - (BASE_TILE_WIDTH / 2) * camera.zoomLevel;
-            const offsetY = mapColumns * (BASE_TILE_HEIGHT / 2) * camera.zoomLevel - (BASE_TILE_HEIGHT / 2) * camera.zoomLevel;
-            const mapRowsPixels = mapRows * BASE_TILE_WIDTH * camera.zoomLevel;
-            const mapColumnsPixels = mapColumns * BASE_TILE_HEIGHT * camera.zoomLevel;
-            const centerX = canvas.width / 2 + offsetX;
-            const centerY = canvas.height / 2;
-            const mapX = centerX - mapRowsPixels / 2 + camera.panX;
-            const mapY = centerY - mapColumnsPixels / 2 + camera.panY;
-            // console.log({ offsetX, offsetY, mapRowsPixels, mapColumnsPixels, centerX, centerY, mapX, mapY});
-
-            // Convert mouse position to map coordinates
-            const relX = mouseX - mapX;
-            const relY = mouseY - mapY; // Hmm, this value seems to adjust with scale 
-
-            // Inverse isometric transform
-            const tileW = BASE_TILE_WIDTH * camera.zoomLevel;
-            const tileH = BASE_TILE_HEIGHT * camera.zoomLevel;
-            const col = Math.floor((relX / (tileW / 2) + relY / (tileH / 2)) / 2);
-            const row = Math.floor((relY / (tileH / 2) - relX / (tileW / 2)) / 2);
-
-            // Clamp to map bounds
-            // if (col < 0 || col >= mapRows || row < 0 || row >= mapColumns) {
-            //     console.log('Clicked outside map');
-            //     return;
-            // }
-
-            // Almost perfect detects the tile clicked on, but we need to adjust for the isometric projection
-            // map[row][col] = 3;
-            drawMap();
-
-            // TODO - have this draw in a 2nd layer above the main canvas
-
-            // 1 - canvas for the map
-            // 2 - for the mouse selection/hover/overlay 
-
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-                // let region = new Path2D();
-                // region.rect(0, 0, canvas.width, canvas.height);
-                // ctx.clip(region);
-
-                // ctx.save();
-                // ctx.font = '16px Arial';
-                // ctx.fillStyle = 'yellow';
-                // ctx.strokeStyle = 'black';
-                // ctx.lineWidth = 2;
-                // const text = `relX: ${relX.toFixed(1)}, relY: ${relY.toFixed(1)}, col: ${col}, row: ${row}`;
-                // const textX = mouseX + 10;
-                // const textY = mouseY + 100;
-                // ctx.strokeText(text, textX, textY);
-                // ctx.fillText(text, textX, textY);
-                // ctx.restore();
-
-                ctx.save();
-                ctx.strokeStyle = 'white';
-                ctx.lineWidth = 2;
-                // Calculate the top-left corner of the tile in screen coordinates
-                const tile = tilesLibrary.find(t => t.code === map[row][col]);
-                const tileWidth = 64 * camera.zoomLevel;
-                const tileHeight = 32 * camera.zoomLevel;
-                const x = (col - row) * tileWidth / 2 + mapX;
-                const y = (col + row) * tileHeight / 2 + mapY - ((tile?.height ? tile.height : BASE_TILE_HEIGHT) - BASE_TILE_HEIGHT) * camera.zoomLevel;
-
-                // Draw diamond
-                ctx.beginPath();
-                ctx.moveTo(x + tileWidth / 2, y); // top
-                ctx.lineTo(x + tileWidth, y + tileHeight / 2); // right
-                ctx.lineTo(x + tileWidth / 2, y + tileHeight); // bottom
-                ctx.lineTo(x, y + tileHeight / 2); // left
-                ctx.closePath();
-                ctx.stroke();
-                ctx.restore();
-
-                // Draw square of detected tile
-                ctx.save();
-                ctx.strokeStyle = 'red';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(x, y, tileWidth, tileHeight);
-                ctx.restore();
-            }
-
-            // console.log(`Clicked map row: ${row}, column: ${col}`);
-        });
+        }
 
         /* Resizes the canvas so that it always fits within the window */
         function resizeCanvas() {
@@ -435,6 +239,7 @@
     onDestroy(() => {
         keyboard.detach();
         touch.detach();
+        mouse.detach();
     });
 </script>
 
