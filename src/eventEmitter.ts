@@ -9,6 +9,8 @@ type MyEvents = EventMap & {
   zoomOut: () => void;
   resetZoom: () => void;
   recenter: () => void;
+  pan: (dx:number, dy:number) => void;
+  adjustZoom: (zoomFactor:number) => void;
 }
 
 // Create an instance of the event emitter class with type safety

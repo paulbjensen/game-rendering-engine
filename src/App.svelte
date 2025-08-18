@@ -6,10 +6,12 @@
     import eventEmitter from './eventEmitter';
     import Camera from './Camera';
     import Keyboard, { type KeyboardOptions} from './Keyboard';
+    import Touch from './Touch';
 
     const fpsResult = fps();
 
     const camera = new Camera({eventEmitter});
+    const touch = new Touch({ eventEmitter });
 
     // Keyboard controls specified here
     const keyboardOptions: KeyboardOptions = {
@@ -47,6 +49,7 @@
         /* Camera settings */
 
         const canvas = document.getElementById('map') as HTMLCanvasElement;
+        touch.attach(canvas);
 
         if (!canvas) {
             console.error('Canvas element not found');
@@ -192,64 +195,6 @@
                 }
             }
         }    
-
-        /*
-            Touch controls for panning and zooming on mobile/tablet devices.
-        */
-        let lastTouchX = 0;
-        let lastTouchY = 0;
-        let lastTouchDistance = 0;
-        let isTouchPanning = false;
-
-        canvas.addEventListener('touchstart', (e) => {
-            if (e.touches.length === 1) {
-                // Single finger: start panning
-                isTouchPanning = true;
-                const rect = canvas.getBoundingClientRect();
-                lastTouchX = e.touches[0].clientX - rect.left;
-                lastTouchY = e.touches[0].clientY - rect.top;
-            } else if (e.touches.length === 2) {
-                // Two fingers: start zooming
-                isTouchPanning = false;
-                const dx = e.touches[0].clientX - e.touches[1].clientX;
-                const dy = e.touches[0].clientY - e.touches[1].clientY;
-                lastTouchDistance = Math.sqrt(dx * dx + dy * dy);
-            }
-        });
-
-        canvas.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-            const rect = canvas.getBoundingClientRect();
-            if (e.touches.length === 1 && isTouchPanning) {
-                // Panning
-                const touchX = e.touches[0].clientX - rect.left;
-                const touchY = e.touches[0].clientY - rect.top;
-                const dx = touchX - lastTouchX;
-                const dy = touchY - lastTouchY;
-                camera.addPan(dx, dy);
-                lastTouchX = touchX;
-                lastTouchY = touchY;
-                drawMap?.();
-            } else if (e.touches.length === 2) {
-                // Pinch zoom
-                const dx = e.touches[0].clientX - e.touches[1].clientX;
-                const dy = e.touches[0].clientY - e.touches[1].clientY;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                if (lastTouchDistance) {
-                    const zoomFactor = distance / lastTouchDistance;
-                    camera.zoomLevel *= zoomFactor;
-                    drawMap?.();
-                }
-                lastTouchDistance = distance;
-            }
-        }, { passive: false });
-
-        canvas.addEventListener('touchend', (e) => {
-            if (e.touches.length === 0) {
-                isTouchPanning = false;
-                lastTouchDistance = 0;
-            }
-        });
 
         /*
             Listen to mousewheel events to zoom in and out.
@@ -447,7 +392,7 @@
                 ctx.restore();
             }
 
-            console.log(`Clicked map row: ${row}, column: ${col}`);
+            // console.log(`Clicked map row: ${row}, column: ${col}`);
         });
 
         /* Resizes the canvas so that it always fits within the window */
@@ -475,6 +420,8 @@
         // EventEmitter bindings
         eventEmitter.on('startPanning', camera.startPanning);
         eventEmitter.on('stopPanning', camera.stopPanning);
+        eventEmitter.on('pan', camera.addPan);
+        eventEmitter.on('adjustZoom', (zoomFactor:number) => camera.setZoom(camera.zoomLevel * zoomFactor));
         eventEmitter.on('zoomOut', camera.zoomOut);
         eventEmitter.on('zoomIn', camera.zoomIn);
         eventEmitter.on('resetZoom', camera.resetZoom);
@@ -487,6 +434,7 @@
     // When unmounting the component
     onDestroy(() => {
         keyboard.detach();
+        touch.detach();
     });
 </script>
 

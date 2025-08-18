@@ -29,6 +29,8 @@ class Camera {
         this.zoomOut = this.zoomOut.bind(this);
         this.resetZoom = this.resetZoom.bind(this);
         this.resetPan = this.resetPan.bind(this);
+        this.addPan = this.addPan.bind(this);
+        this.setZoom = this.setZoom.bind(this);
     }
 
     /*
@@ -63,6 +65,7 @@ class Camera {
     addPan(dx:number, dy:number) {
         this.panX += dx;
         this.panY += dy;
+        this.eventEmitter.emit('cameraUpdated', { panX: this.panX, panY: this.panY, zoomLevel: this.zoomLevel });
     }
 
     /*
