@@ -25,6 +25,10 @@ class Camera {
         this.activePanningDirections = [];
         this.startPanning = this.startPanning.bind(this);
         this.stopPanning = this.stopPanning.bind(this);
+        this.zoomIn = this.zoomIn.bind(this);
+        this.zoomOut = this.zoomOut.bind(this);
+        this.resetZoom = this.resetZoom.bind(this);
+        this.resetPan = this.resetPan.bind(this);
     }
 
     /*
@@ -34,6 +38,15 @@ class Camera {
     */
     setZoom(level:number) {
         this.zoomLevel = level;
+        this.eventEmitter.emit('cameraUpdated', { panX: this.panX, panY: this.panY, zoomLevel: this.zoomLevel });
+    }
+
+    zoomIn() {
+        this.setZoom(this.zoomLevel * 1.1);
+    }
+
+    zoomOut() {
+        this.setZoom(this.zoomLevel / 1.1);
     }
 
     /*
@@ -66,6 +79,7 @@ class Camera {
     */
     resetZoom() {
         this.zoomLevel = 1;
+        this.eventEmitter.emit('cameraUpdated', { panX: this.panX, panY: this.panY, zoomLevel: this.zoomLevel });
     }
 
     /*
@@ -74,6 +88,7 @@ class Camera {
     resetPan() {
         this.panX = 0;
         this.panY = 0;
+        this.eventEmitter.emit('cameraUpdated', { panX: this.panX, panY: this.panY, zoomLevel: this.zoomLevel });
     }
 
     /*

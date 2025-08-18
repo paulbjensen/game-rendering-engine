@@ -3,7 +3,6 @@
     import { imageHasLoaded, } from './utils';
     import { map, tilesLibrary, mapRows, mapColumns, BASE_TILE_WIDTH, BASE_TILE_HEIGHT } from './mapAndTiles';
     import {fps} from "@sveu/browser"
-    import type { Direction } from './types';
     import eventEmitter from './eventEmitter';
     import Camera from './Camera';
     import Keyboard, { type KeyboardOptions} from './Keyboard';
@@ -28,7 +27,7 @@
             'ArrowUp': () => eventEmitter.emit('stopPanning', 'up'),
             'ArrowDown': () => eventEmitter.emit('stopPanning', 'down'),
             'ArrowLeft': () => eventEmitter.emit('stopPanning', 'left'),
-            'ArrowRight': () => eventEmitter.emit('stopPanning', 'right'),
+            'ArrowRight': () => eventEmitter.emit('stopPanning', 'right')
         }
     } ;
 
@@ -47,12 +46,6 @@
 
         /* Camera settings */
 
-        /*
-            A reference for the drawMap function that is
-            in the code in multiple locations
-        */
-        let drawMap: (() => void) | null = null;
-
         const canvas = document.getElementById('map') as HTMLCanvasElement;
 
         if (!canvas) {
@@ -60,22 +53,12 @@
             throw new Error('Canvas element not found');
         }
 
-        /* Resizes the canvas so that it always fits within the window */
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            drawMap?.();
-        }
-
-        // Call the resizeCanvas function initially and when the window is resized
-        window.addEventListener('resize', resizeCanvas);
-
         /*
             This function draws the map onto the canvas.
             It calculates the position of each tile based on the map data,
             the zoom level, and the pan offsets.
         */
-        drawMap = () => {
+        const drawMap = () => {
             // NOTE - at some point we will want to architect the code to make this more efficient
             const ctx = canvas.getContext('2d');
             if (!ctx) {
@@ -467,6 +450,16 @@
             console.log(`Clicked map row: ${row}, column: ${col}`);
         });
 
+        /* Resizes the canvas so that it always fits within the window */
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            drawMap?.();
+        }
+
+        // Call the resizeCanvas function initially and when the window is resized
+        window.addEventListener('resize', resizeCanvas);
+
         /* Load the map when all of the images are ready to be rendered */
         function loadMapWhenReady() {
             const tilesLoaded = tilesLibrary.every(t => imageHasLoaded(t.image));
@@ -479,47 +472,22 @@
             }
         }
 
-        // Zoom and centering functions
-
-        function zoomOut () {
-            // Zoom out
-            camera.setZoom(camera.zoomLevel / 1.1);
-            drawMap?.();
-        }
-
-        function zoomIn () {
-            // Zoom in
-            camera.setZoom(camera.zoomLevel * 1.1);
-            drawMap?.();
-        }
-
-        function resetZoom() {
-            // Reset zoom to 1
-            camera.resetZoom();
-            drawMap?.();
-        }
-
-        function recenter() {
-            // Center the map
-            camera.resetPan();
-            drawMap?.();
-        }
-
-
         // EventEmitter bindings
         eventEmitter.on('startPanning', camera.startPanning);
         eventEmitter.on('stopPanning', camera.stopPanning);
-        eventEmitter.on('zoomOut', zoomOut);
-        eventEmitter.on('zoomIn', zoomIn);
-        eventEmitter.on('resetZoom', resetZoom);
-        eventEmitter.on('recenter', recenter);
+        eventEmitter.on('zoomOut', camera.zoomOut);
+        eventEmitter.on('zoomIn', camera.zoomIn);
+        eventEmitter.on('resetZoom', camera.resetZoom);
+        eventEmitter.on('recenter', camera.resetPan);
         eventEmitter.on('cameraUpdated', drawMap);
 
         loadMapWhenReady();
     });
 
     // When unmounting the component
-    onDestroy(keyboard.detach);
+    onDestroy(() => {
+        keyboard.detach();
+    });
 </script>
 
 <style>
