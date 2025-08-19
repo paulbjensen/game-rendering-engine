@@ -1,4 +1,4 @@
-import { loadImage, loadJSON } from './utils';
+import { loadImage } from './utils';
 
 /*
     This will be where we store the tileset images, and then we can use
@@ -42,14 +42,7 @@ const tilesLibrary = [
 // const map = generateRandomMap(128,128);
 
 // Load the map data from a JSON file
-const map = await loadJSON('/maps/16x16.json');
 
-/*
-    We define the map dimensions here to help with drawing 
-    the map onto the canvas
-*/
-const mapRows = map.length;
-const mapColumns = map[0].length;
 
 /*
     NOTE - these should be the default tile width and height values, 
@@ -59,4 +52,4 @@ const mapColumns = map[0].length;
 const BASE_TILE_WIDTH = 64;
 const BASE_TILE_HEIGHT = 32;
 
-export { map, tilesLibrary, mapRows, mapColumns, BASE_TILE_WIDTH, BASE_TILE_HEIGHT };
+export { tilesLibrary, BASE_TILE_WIDTH, BASE_TILE_HEIGHT };

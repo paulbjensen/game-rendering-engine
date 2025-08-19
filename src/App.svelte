@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onDestroy, onMount } from 'svelte';
     import { imageHasLoaded, } from './utils';
-    import { map, tilesLibrary } from './mapAndTiles';
+    import { tilesLibrary } from './mapAndTiles';
     import {fps} from "@sveu/browser"
     import eventEmitter from './eventEmitter';
     import Camera from './Camera';
@@ -9,6 +9,8 @@
     import Touch from './controls/Touch';
     import Mouse from './controls/Mouse';
     import GameMap from './GameMap';
+    import type { MapData } from './types';
+    import { loadJSON } from './utils';
 
     const fpsResult = fps();
 
@@ -42,6 +44,9 @@
     keyboard.attach();
 
     onMount(async () => {
+
+        const map: MapData = await loadJSON('/maps/16x16.json');
+
         /*
             Create an isometric tile map in the game world using HTML5 canvas.
 
@@ -49,7 +54,7 @@
             especially characters and clicking on objects?
         */
         const canvas = document.getElementById('map') as HTMLCanvasElement;
-        gameMap = new GameMap({ target: canvas, camera });
+        gameMap = new GameMap({ target: canvas, camera, map });
 
         touch.attach(canvas);
         mouse.attach(canvas);
