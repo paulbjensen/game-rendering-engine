@@ -24,4 +24,17 @@ const imageHasLoaded = (img:HTMLImageElement) => {
     return img.complete && img.naturalHeight !== 0;
 };
 
-export { loadImage, loadJSON, imageHasLoaded }
+const delayUntil = (condition: () => boolean, interval: number = 100) => {
+    return new Promise<void>((resolve) => {
+        const checkCondition = () => {
+            if (condition()) {
+                resolve();
+            } else {
+                setTimeout(checkCondition, interval);
+            }
+        };
+        checkCondition();
+    });
+};
+
+export { loadImage, loadJSON, imageHasLoaded, delayUntil }

@@ -1,7 +1,7 @@
 import type ImageAssetSet from "./assets/ImageAssetSet";
 import type Camera from "./Camera";
 import type { MapData } from "./types";
-import { imageHasLoaded } from "./utils";
+import { delayUntil, imageHasLoaded } from "./utils";
 
 class GameMap {
 
@@ -19,6 +19,7 @@ class GameMap {
         this.draw = this.draw.bind(this);
         this.loadImageAssets = this.loadImageAssets.bind(this);
         this.hasLoaded = this.hasLoaded.bind(this);
+        this.load = this.load.bind(this);
         this.rows = map.length;
         // TODO - check that the map columns are equal for all rows? - Perhaps we want to draw unusual shaped maps in the future - maybe like the inside of a building with curved walls as an example, or game maps that look like levels with rooms?
         // Actually - we might want to create maps like dungeons as an example - we'd need to be able to do that 
@@ -43,6 +44,11 @@ class GameMap {
         const imageAssets = this.imageAssetSet.imageAssets.filter(imageAsset => imageAsset.image);
         const imagesHaveLoaded = imageAssets.length > 0 && imageAssets.every(imageAsset => imageAsset.image && imageHasLoaded(imageAsset.image));
         return imagesHaveLoaded;
+    }
+
+    async load() {
+        this.loadImageAssets();
+        await delayUntil(() => this.hasLoaded());
     }
 
     draw() {

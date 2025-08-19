@@ -80,16 +80,6 @@
         // Call the resizeCanvas function initially and when the window is resized
         window.addEventListener('resize', resizeCanvas);
 
-        /* Load the map when all of the images are ready to be rendered */
-        function loadMapWhenReady() {
-            gameMap?.loadImageAssets();
-            if (gameMap?.hasLoaded()) {
-                resizeCanvas();
-            } else {
-                setTimeout(loadMapWhenReady, 100);
-            }
-        }
-
         // EventEmitter bindings
         eventEmitter.on('startPanning', camera.startPanning);
         eventEmitter.on('stopPanning', camera.stopPanning);
@@ -100,7 +90,11 @@
         eventEmitter.on('resetZoom', camera.resetZoom);
         eventEmitter.on('recenter', camera.resetPan);
         eventEmitter.on('cameraUpdated', gameMap.draw);
-        loadMapWhenReady();
+
+        // Load map assets then resize the canvas once loaded
+        await gameMap?.load();
+        resizeCanvas();
+
     });
 
     // When unmounting the component
