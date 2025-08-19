@@ -1,0 +1,17 @@
+[
+    { "code": 0, "name": "grass", "imageUrl": "/img/grass.png", "width": 64, "height": 32 },
+    { "code": 1, "name": "road", "imageUrl": "/img/road.png", "width": 64, "height": 32 },
+    { "code": 2, "name": "water", "imageUrl": "/img/water.png", "width": 64, "height": 32 },
+    { "code": 3, "name": "dot", "imageUrl": "/img/dot.png", "width": 64, "height": 64 },
+    { "code": 4, "name": "dot-only", "imageUrl": "/img/dot-only.png", "width": 64, "height": 64 },
+    { "code": 5, "name": "water-round-top", "imageUrl": "/img/water-round-top.png", "width": 64, "height": 32 },
+    { "code": 6, "name": "water-round-left", "imageUrl": "/img/water-round-left.png", "width": 64, "height": 32 },
+    { "code": 7, "name": "water-round-bottom", "imageUrl": "/img/water-round-bottom.png", "width": 64, "height": 32 },
+    { "code": 8, "name": "water-round-right", "imageUrl": "/img/water-round-right.png", "width": 64, "height": 32 },
+    { "code": 9, "name": "road-with-markings-tl-br", "imageUrl": "/img/road-with-markings-tl-br.png", "width": 64, "height": 32 },
+    { "code": 10, "name": "road-with-markings-bl-tr", "imageUrl": "/img/road-with-markings-bl-tr.png", "width": 64, "height": 32 },
+    { "code": 11, "name": "sand", "imageUrl": "/img/sand.png", "width": 64, "height": 32 },
+    { "code": 12, "name": "english-townhouse", "imageUrl": "/img/english-townhouse.png", "width": 64, "height": 64 },
+    { "code": 13, "name": "cornershop", "imageUrl": "/img/cornershop.png", "width": 64, "height": 64 },
+    { "code": 14, "name": "house", "imageUrl": "/img/house.png", "width": 64, "height": 64 }
+]

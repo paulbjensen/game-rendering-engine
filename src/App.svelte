@@ -1,7 +1,5 @@
 <script lang="ts">
     import { onDestroy, onMount } from 'svelte';
-    import { imageHasLoaded, } from './utils';
-    import { tilesLibrary } from './mapAndTiles';
     import {fps} from "@sveu/browser"
     import eventEmitter from './eventEmitter';
     import Camera from './Camera';
@@ -11,6 +9,7 @@
     import GameMap from './GameMap';
     import type { MapData } from './types';
     import { loadJSON } from './utils';
+	import ImageAssetSet from './assets/ImageAssetSet';
 
     const fpsResult = fps();
 
@@ -46,6 +45,13 @@
     onMount(async () => {
 
         const map: MapData = await loadJSON('/maps/16x16.json');
+        const imageAssets = await loadJSON('/imageAssetSets/1.json');
+
+        const imageAssetSet = new ImageAssetSet({
+            imageAssets,
+            baseTileWidth: 64,
+            baseTileHeight: 32
+        });
 
         /*
             Create an isometric tile map in the game world using HTML5 canvas.
@@ -54,7 +60,7 @@
             especially characters and clicking on objects?
         */
         const canvas = document.getElementById('map') as HTMLCanvasElement;
-        gameMap = new GameMap({ target: canvas, camera, map });
+        gameMap = new GameMap({ target: canvas, camera, map, imageAssetSet });
 
         touch.attach(canvas);
         mouse.attach(canvas);
@@ -64,7 +70,7 @@
             throw new Error('Canvas element not found');
         }
 
-        /* Resizes the canvas so that it always fits within the window */
+        /* Resizes the canvas so that it alw ays fits within the window */
         function resizeCanvas() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
@@ -76,10 +82,8 @@
 
         /* Load the map when all of the images are ready to be rendered */
         function loadMapWhenReady() {
-            const tilesLoaded = tilesLibrary.every(t => imageHasLoaded(t.image));
-            const mapLoaded = map && map.length > 0;
-
-            if (tilesLoaded && mapLoaded) {
+            gameMap?.loadImageAssets();
+            if (gameMap?.hasLoaded()) {
                 resizeCanvas();
             } else {
                 setTimeout(loadMapWhenReady, 100);
