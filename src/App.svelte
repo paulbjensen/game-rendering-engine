@@ -110,6 +110,25 @@
 </script>
 
 <style>
+    #fps-count {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        border: solid 1px white;
+        padding: 8px;
+        border-radius: 8px;
+        background: black;
+        color: white;
+        font-family:Arial, Helvetica, sans-serif;
+        text-transform: uppercase;
+        font-weight: bold;
+    }
+
+    #map {
+        cursor: move;
+        width:100vw;
+        height:100vh;
+    }           
 </style>
 
 <main>
