@@ -1,8 +1,5 @@
 import { mount } from "svelte";
-import "../css/map.css";
-
 import App from "./App.svelte";
-
 
 const appElement: HTMLElement | null = document.getElementById("app");
 
