@@ -22,9 +22,9 @@ class Touch {
 
     attach(target: HTMLElement) {
         if (target) this.target = target;
-        this.target?.addEventListener('touchstart', this.onTouchStart);
+        this.target?.addEventListener('touchstart', this.onTouchStart, { passive: false });
         this.target?.addEventListener('touchmove', this.onTouchMove, { passive: false });
-        this.target?.addEventListener('touchend', this.onTouchEnd);
+        this.target?.addEventListener('touchend', this.onTouchEnd, { passive: false });
     }
 
     detach() {

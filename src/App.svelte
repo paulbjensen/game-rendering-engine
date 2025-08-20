@@ -6,6 +6,7 @@
     import Keyboard, { type KeyboardOptions} from './controls/Keyboard';
     import Touch from './controls/Touch';
     import Mouse from './controls/Mouse';
+    import Cursor from './controls/Cursor';
     import GameMap from './GameMap';
     import type { MapData } from './types';
     import { loadJSON } from './utils';
@@ -16,6 +17,7 @@
     const camera = new Camera({ eventEmitter });
     const touch = new Touch({ eventEmitter });
     const mouse = new Mouse({ eventEmitter });
+    const cursor = new Cursor({});
     let gameMap: GameMap | null = null;
 
     // Keyboard controls specified here
@@ -64,6 +66,7 @@
 
         touch.attach(canvas);
         mouse.attach(canvas);
+        cursor.attach(canvas);
 
         if (!canvas) {
             console.error('Canvas element not found');
@@ -102,6 +105,7 @@
         keyboard.detach();
         touch.detach();
         mouse.detach();
+        cursor.detach();
     });
 </script>
 
