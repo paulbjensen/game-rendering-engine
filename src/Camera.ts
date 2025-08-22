@@ -8,10 +8,14 @@ class Camera {
     activePanningDirections: Direction[];
     panningInterval: ReturnType<typeof setInterval> | null;
     eventEmitter: InstanceType<typeof EventEmitter>;
+    maxZoomLevel: number | null;
+    minZoomLevel: number | null;
 
-    constructor({eventEmitter}: {eventEmitter: InstanceType<typeof EventEmitter>}) {
+    constructor({eventEmitter, minZoomLevel, maxZoomLevel}: {eventEmitter: InstanceType<typeof EventEmitter>, minZoomLevel?: number, maxZoomLevel?: number}) {
         this.eventEmitter = eventEmitter;
         this.zoomLevel = 1;
+        this.maxZoomLevel = maxZoomLevel || null;
+        this.minZoomLevel = minZoomLevel || null;
         this.panX = 0;
         this.panY = 0;
            /* Used to track if we are panning */
@@ -39,6 +43,12 @@ class Camera {
         @param level The new zoom level.
     */
     setZoom(level:number) {
+        if (this.minZoomLevel !== null && level < this.minZoomLevel) {
+            level = this.minZoomLevel;
+        }
+        if (this.maxZoomLevel !== null && level > this.maxZoomLevel) {
+            level = this.maxZoomLevel;
+        }
         this.zoomLevel = level;
         this.eventEmitter.emit('cameraUpdated', { panX: this.panX, panY: this.panY, zoomLevel: this.zoomLevel });
     }

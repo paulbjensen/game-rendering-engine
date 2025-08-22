@@ -14,7 +14,7 @@
 
     const fpsResult = fps();
 
-    const camera = new Camera({ eventEmitter });
+    const camera = new Camera({ eventEmitter, maxZoomLevel: 4, minZoomLevel: 0.5 });
     const touch = new Touch({ eventEmitter });
     const mouse = new Mouse({ eventEmitter });
     const cursor = new Cursor({});
@@ -38,7 +38,7 @@
             'ArrowLeft': () => eventEmitter.emit('stopPanning', 'left'),
             'ArrowRight': () => eventEmitter.emit('stopPanning', 'right')
         }
-    } ;
+    };
 
     // Attach the keyboard event listeners
     const keyboard = new Keyboard(keyboardOptions);
@@ -66,7 +66,7 @@
 
         touch.attach(canvas);
         mouse.attach(canvas);
-        cursor.attach(canvas);
+        cursor.attach({ target: canvas, camera, gameMap: gameMap });
 
         if (!canvas) {
             console.error('Canvas element not found');
@@ -128,7 +128,7 @@
         cursor: move;
         width:100vw;
         height:100vh;
-    }           
+    }
 </style>
 
 <main>
