@@ -1,3 +1,4 @@
+import type EventEmitter from "@anephenix/event-emitter";
 import type Camera from "../Camera";
 import type GameMap from "../GameMap";
 
@@ -8,11 +9,13 @@ class Cursor {
     target?: HTMLCanvasElement | null;
     gameMap?: GameMap | null;
     camera? : Camera | null;
+    eventEmitter: InstanceType<typeof EventEmitter>;
 
-    constructor ({target}: {target?: HTMLCanvasElement | null}) {
+    constructor ({target, eventEmitter}: {target?: HTMLCanvasElement | null, eventEmitter: InstanceType<typeof EventEmitter>}) {
         this.x = 0;
         this.y = 0;
         if (target) this.target = target;
+        this.eventEmitter = eventEmitter;
         this.onMouseMove = this.onMouseMove.bind(this);
         this.onClick = this.onClick.bind(this);
         this.calculatePositionOnMap = this.calculatePositionOnMap.bind(this);
@@ -44,8 +47,13 @@ class Cursor {
         const rect = this.target.getBoundingClientRect();
         this.x = event.clientX - rect.left;
         this.y = event.clientY - rect.top;
+        const currentSelectedTile = this.gameMap?.selectedTile;
         this.calculatePositionOnMap();
-        this.gameMap?.draw();
+        this.eventEmitter.emit('click', this.gameMap?.selectedTile);
+        // Redraw if changed
+        if (this.hasChanged(currentSelectedTile, this.gameMap?.selectedTile)) {
+            this.gameMap?.draw();
+        }
     }
 
     calculatePositionOnMap() {
@@ -61,7 +69,7 @@ class Cursor {
         const HH = TH / 2;
 
         // Total rhombus size for centering
-        const MAP_W = (rows + cols) * HW;
+        // const MAP_W = (rows + cols) * HW; - unused
         const MAP_H = (rows + cols) * HH;
 
         // Mouse in map space: subtract camera pan

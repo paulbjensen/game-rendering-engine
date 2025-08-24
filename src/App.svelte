@@ -8,17 +8,22 @@
     import Mouse from './controls/Mouse';
     import Cursor from './controls/Cursor';
     import GameMap from './GameMap';
-    import type { MapData } from './types';
+    import type { MapData, ImageAsset } from './types';
     import { loadJSON } from './utils';
 	import ImageAssetSet from './assets/ImageAssetSet';
+    import Sidebar from './Sidebar.svelte';
 
     const fpsResult = fps();
 
     const camera = new Camera({ eventEmitter, maxZoomLevel: 4, minZoomLevel: 0.5 });
     const touch = new Touch({ eventEmitter });
     const mouse = new Mouse({ eventEmitter });
-    const cursor = new Cursor({});
+    const cursor = new Cursor({eventEmitter});
     let gameMap: GameMap | null = null;
+
+    let imageAssetSet: ImageAssetSet | null = $state(null);
+
+    let selectedImageAsset: ImageAsset | null = $state(null);
 
     // Keyboard controls specified here
     const keyboardOptions: KeyboardOptions = {
@@ -49,7 +54,7 @@
         const map: MapData = await loadJSON('/maps/16x16.json');
         const imageAssets = await loadJSON('/imageAssetSets/1.json');
 
-        const imageAssetSet = new ImageAssetSet({
+        imageAssetSet = new ImageAssetSet({
             imageAssets,
             baseTileWidth: 64,
             baseTileHeight: 32
@@ -93,6 +98,21 @@
         eventEmitter.on('resetZoom', camera.resetZoom);
         eventEmitter.on('recenter', camera.resetPan);
         eventEmitter.on('cameraUpdated', gameMap.draw);
+        eventEmitter.on('selectImageAsset', (imageAsset: ImageAsset) => {
+            console.log('Selected image asset', imageAsset);
+            selectedImageAsset = imageAsset;
+        });
+        eventEmitter.on('click', (tile: [number, number] | null) => {
+            if (tile && selectedImageAsset && gameMap) {
+                console.log('Placing tile', selectedImageAsset, 'at', tile);
+                if (Array.isArray(tile)) {
+                    gameMap.map[tile[0]][tile[1]] = [0, selectedImageAsset.code];
+                } else {
+                    gameMap.map[tile] = [0, selectedImageAsset.code];
+                }
+                gameMap.draw();
+            }
+        });
 
         // Load map assets then resize the canvas once loaded
         await gameMap?.load();
@@ -136,4 +156,7 @@
     <canvas id="map">
         Your browser does not support the canvas element.
     </canvas>
+    {#if imageAssetSet}
+        <Sidebar {imageAssetSet} {eventEmitter} {selectedImageAsset} />
+    {/if}
 </main>

@@ -6,6 +6,7 @@ export type MapData = MapTile[][];
 export type ImageAsset = {
     code: number;
     name: string;
+    type: 'terrain' | 'road' | 'building' | 'random';
     imageUrl: string;
     image: HTMLImageElement | null;
     width: number;
