@@ -17,5 +17,13 @@
     { "code": 15, "name": "road-corner-top", "type": "road", "imageUrl": "/img/road-corner-top.png", "width": 64, "height": 32 },
     { "code": 16, "name": "road-corner-left", "type": "road", "imageUrl": "/img/road-corner-left.png", "width": 64, "height": 32 },
     { "code": 17, "name": "road-corner-bottom", "type": "road", "imageUrl": "/img/road-corner-bottom.png", "width": 64, "height": 32 },
-    { "code": 18, "name": "road-corner-right", "type": "road", "imageUrl": "/img/road-corner-right.png", "width": 64, "height": 32 }
+    { "code": 18, "name": "road-corner-right", "type": "road", "imageUrl": "/img/road-corner-right.png", "width": 64, "height": 32 },
+    { "code": 19, "name": "tarmac-corner-top", "type": "road", "imageUrl": "/img/tarmac-corner-top.png", "width": 64, "height": 32 },
+    { "code": 20, "name": "tarmac-corner-left", "type": "road", "imageUrl": "/img/tarmac-corner-left.png", "width": 64, "height": 32 },
+    { "code": 21, "name": "tarmac-corner-bottom", "type": "road", "imageUrl": "/img/tarmac-corner-bottom.png", "width": 64, "height": 32 },
+    { "code": 22, "name": "tarmac-corner-right", "type": "road", "imageUrl": "/img/tarmac-corner-right.png", "width": 64, "height": 32 },
+    { "code": 23, "name": "sand-corner-top", "type": "terrain", "imageUrl": "/img/sand-corner-top.png", "width": 64, "height": 32 },
+    { "code": 24, "name": "sand-corner-left", "type": "terrain", "imageUrl": "/img/sand-corner-left.png", "width": 64, "height": 32 },
+    { "code": 25, "name": "sand-corner-bottom", "type": "terrain", "imageUrl": "/img/sand-corner-bottom.png", "width": 64, "height": 32 },
+    { "code": 26, "name": "sand-corner-right", "type": "terrain", "imageUrl": "/img/sand-corner-right.png", "width": 64, "height": 32 }
 ]
