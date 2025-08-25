@@ -51,7 +51,7 @@
 
     onMount(async () => {
 
-        const map: MapData = await loadJSON('/maps/16x16.json');
+        const map: MapData = await loadJSON('/maps/128x128.json');
         const imageAssets = await loadJSON('/imageAssetSets/1.json');
 
         imageAssetSet = new ImageAssetSet({

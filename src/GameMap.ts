@@ -29,17 +29,21 @@ class GameMap {
     }
 
     loadImageAssets() {
-
-        const imageCodes = new Set<number>();
-        for (const row of this.map) {
-            for (const column of row) {
-                for (const tile of Array.isArray(column) ? column : [column]) {
-                    imageCodes.add(tile);
+        const loadOnlyMapAssets = false;
+        if (loadOnlyMapAssets) {
+            const imageCodes = new Set<number>();
+            for (const row of this.map) {
+                for (const column of row) {
+                    for (const tile of Array.isArray(column) ? column : [column]) {
+                        imageCodes.add(tile);
+                    }
                 }
             }
-        }
 
-        this.imageAssetSet.loadImages(Array.from(imageCodes));
+            this.imageAssetSet.loadImages(Array.from(imageCodes));
+        } else {
+            this.imageAssetSet.loadImages();
+        }
     }
 
     hasLoaded() {

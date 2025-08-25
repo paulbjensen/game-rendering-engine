@@ -13,5 +13,9 @@
     { "code": 11, "name": "sand", "type": "terrain", "imageUrl": "/img/sand.png", "width": 64, "height": 32 },
     { "code": 12, "name": "english-townhouse", "type": "building", "imageUrl": "/img/english-townhouse.png", "width": 64, "height": 64 },
     { "code": 13, "name": "cornershop", "type": "building", "imageUrl": "/img/cornershop.png", "width": 64, "height": 64 },
-    { "code": 14, "name": "house", "type": "building", "imageUrl": "/img/house.png", "width": 64, "height": 64 }
+    { "code": 14, "name": "house", "type": "building", "imageUrl": "/img/house.png", "width": 64, "height": 64 },
+    { "code": 15, "name": "road-corner-top", "type": "road", "imageUrl": "/img/road-corner-top.png", "width": 64, "height": 32 },
+    { "code": 16, "name": "road-corner-left", "type": "road", "imageUrl": "/img/road-corner-left.png", "width": 64, "height": 32 },
+    { "code": 17, "name": "road-corner-bottom", "type": "road", "imageUrl": "/img/road-corner-bottom.png", "width": 64, "height": 32 },
+    { "code": 18, "name": "road-corner-right", "type": "road", "imageUrl": "/img/road-corner-right.png", "width": 64, "height": 32 }
 ]

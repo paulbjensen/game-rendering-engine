@@ -14,7 +14,7 @@ class ImageAssetSet {
         this.loadImages = this.loadImages.bind(this);
     }
 
-    loadImages(imageCodes: number[]) {
+    loadImages(imageCodes?: number[]) {
 
         if (imageCodes) {
             imageCodes.forEach((imageCode: number) => {
