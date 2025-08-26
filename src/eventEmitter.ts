@@ -1,6 +1,6 @@
 // Load the dependency class for TypeScript usage
 import EventEmitter, { type EventMap } from "@anephenix/event-emitter";
-import type { Direction, ImageAsset } from './types';
+import type { AppMode, Direction, ImageAsset } from './types';
 
 type MyEvents = EventMap & {
   startPanning: (direction: Direction) => void;
@@ -13,6 +13,7 @@ type MyEvents = EventMap & {
   adjustZoom: (zoomFactor:number) => void;
   selectImageAsset: (imageAsset: ImageAsset) => void;
   click: (tile: [number, number] | null) => void;
+  setAppMode: (mode: AppMode) => void;
 }
 
 // Create an instance of the event emitter class with type safety

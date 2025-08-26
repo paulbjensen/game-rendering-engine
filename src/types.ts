@@ -12,3 +12,5 @@ export type ImageAsset = {
     width: number;
     height: number;
 }
+
+export type AppMode = 'navigation' | 'edit';

@@ -3,6 +3,7 @@ import type EventEmitter from '@anephenix/event-emitter';
 interface MouseOptions {
     target?: HTMLElement | null;
     eventEmitter: InstanceType<typeof EventEmitter>;
+    mousePanning?: boolean;
 }
 
 class Mouse {
@@ -17,6 +18,7 @@ class Mouse {
     suppressClick: boolean = false;
     dragThreshold: number = 5; // pixels
     dragDistance: number = 0;
+    mousePanning: boolean = true;
 
     constructor({target, eventEmitter}: MouseOptions) {
         if (target) this.target = target;
@@ -55,6 +57,7 @@ class Mouse {
 
     /* This is used to intercept the mousedown event for when dragging starts */
     onMouseDown (event: MouseEvent) {
+        if (!this.mousePanning) return;
         this.suppressClick = false;
         this.isDragging = true;
         const rect = this.target?.getBoundingClientRect();
@@ -91,8 +94,8 @@ class Mouse {
     }
 
     onMouseMove (event: MouseEvent) {
+        if (!this.mousePanning) return;
         this.adjustCameraPan(event);
-        // this.drawCursor(event);
     }
 
     /*
@@ -100,6 +103,7 @@ class Mouse {
         velocity effect on the map, so that it continues to move.
     */
     onMouseUp () {
+        if (!this.mousePanning) return;
         this.isDragging = false;
         const friction = 0.95;
         const applyMomentum = () => {
@@ -122,6 +126,7 @@ class Mouse {
         mouseleave events.
     */
     onMouseLeave () {
+        if (!this.mousePanning) return;
         this.isDragging = false;
     }
 

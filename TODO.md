@@ -1,6 +1,9 @@
 # TODO List
 
 - [x] Make the click track to the exact tile it is over - at the moment it has a skew effect depending on x/y position of click relative to the center of the tile.
+- [x] Be able to switch between navigation and edit modes to implement drag and drop in combo with the 
+- [ ] Be able to drag and drop a selection of tiles so that you can create roads easily, (or do cleanup for example)
+- [x] Create curved road corners and junctions that look nice.
 - [ ] Make the tile selector render in a separate canvas layer above the existing map layer - so that ctx.clear() on it helps to reduce the need to redraw the whole map.
 - [ ] Work out how to handle and apply window device pixel ratio to the rendering of the map and to movement controls
 - [x] Create a Map class that handles the map data, the tiles, and rendering

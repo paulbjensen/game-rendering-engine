@@ -8,10 +8,12 @@
     import Mouse from './controls/Mouse';
     import Cursor from './controls/Cursor';
     import GameMap from './GameMap';
-    import type { MapData, ImageAsset } from './types';
+    import type { AppMode, MapData, ImageAsset } from './types';
     import { loadJSON } from './utils';
 	import ImageAssetSet from './assets/ImageAssetSet';
     import Sidebar from './Sidebar.svelte';
+    import TopBar from './TopBar.svelte';
+	import app from './main';
 
     const fpsResult = fps();
 
@@ -24,6 +26,18 @@
     let imageAssetSet: ImageAssetSet | null = $state(null);
 
     let selectedImageAsset: ImageAsset | null = $state(null);
+
+    let appMode: AppMode = $state('navigation');
+
+    const setAppmode = (mode: AppMode) => {
+        if (mode === "navigation") {
+            mouse.mousePanning = true;
+            selectedImageAsset = null;
+        } else if (mode === "edit") {
+            mouse.mousePanning = false;
+        }
+        appMode = mode;
+    };
 
     // Keyboard controls specified here
     const keyboardOptions: KeyboardOptions = {
@@ -113,6 +127,7 @@
                 gameMap.draw();
             }
         });
+        eventEmitter.on('setAppMode', setAppmode);
 
         // Load map assets then resize the canvas once loaded
         await gameMap?.load();
@@ -134,10 +149,12 @@
         position: absolute;
         top: 20px;
         right: 20px;
-        border: solid 1px white;
+        border: solid 1px rgba(255,255,255,0.2);
+        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
         padding: 8px;
         border-radius: 8px;
-        background: black;
+        background: rgba(0,0,0,0.2);
+        backdrop-filter: blur(10px);
         color: white;
         font-family:Arial, Helvetica, sans-serif;
         text-transform: uppercase;
@@ -156,7 +173,8 @@
     <canvas id="map">
         Your browser does not support the canvas element.
     </canvas>
-    {#if imageAssetSet}
+    {#if imageAssetSet && appMode==="edit"}
         <Sidebar {imageAssetSet} {eventEmitter} {selectedImageAsset} />
     {/if}
+    <TopBar {appMode} {eventEmitter} />
 </main>
