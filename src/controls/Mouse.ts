@@ -4,6 +4,7 @@ interface MouseOptions {
     target?: HTMLElement | null;
     eventEmitter: InstanceType<typeof EventEmitter>;
     mousePanning?: boolean;
+    momentum?: boolean;
 }
 
 /* 
@@ -27,6 +28,7 @@ class Mouse {
     dragThreshold: number = 5; // pixels
     dragDistance: number = 0;
     mousePanning: boolean = true;
+    momentum: boolean = true;
 
     constructor({target, eventEmitter}: MouseOptions) {
         if (target) this.target = target;
@@ -114,6 +116,7 @@ class Mouse {
     */
     onMouseUp () {
         if (!this.mousePanning) return;
+        if (!this.momentum) return;
         this.isDragging = false;
         const friction = 0.95;
         const applyMomentum = () => {

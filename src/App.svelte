@@ -31,9 +31,8 @@
     const setAppmode = (mode: AppMode) => {
         if (mode === "navigation") {
             mouse.mousePanning = true;
+            mouse.momentum = true;
             selectedImageAsset = null;
-        } else if (mode === "edit") {
-            mouse.mousePanning = false;
         }
         appMode = mode;
     };
@@ -98,6 +97,21 @@
             gameMap?.draw();
         }
 
+        /*
+            Selects an image asset and toggles mouse panning and momentum as 
+            we want to be able to apply a set of tiles by selecting multiple tiles  
+        */
+        function selectImageAsset (imageAsset: ImageAsset | null) {
+            if (imageAsset && appMode === 'edit') {
+                mouse.mousePanning = false;
+                mouse.momentum = false;
+            } else {
+                mouse.mousePanning = true;
+                mouse.momentum = true;
+            }
+            selectedImageAsset = imageAsset;
+        }
+
         // Call the resizeCanvas function initially and when the window is resized
         window.addEventListener('resize', resizeCanvas);
 
@@ -111,10 +125,7 @@
         eventEmitter.on('resetZoom', camera.resetZoom);
         eventEmitter.on('recenter', camera.resetPan);
         eventEmitter.on('cameraUpdated', gameMap.draw);
-        eventEmitter.on('selectImageAsset', (imageAsset: ImageAsset) => {
-            console.log('Selected image asset', imageAsset);
-            selectedImageAsset = imageAsset;
-        });
+        eventEmitter.on('selectImageAsset', selectImageAsset);
         eventEmitter.on('click', (tile: [number, number] | null) => {
             if (tile && selectedImageAsset && gameMap) {
                 console.log('Placing tile', selectedImageAsset, 'at', tile);
