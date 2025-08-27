@@ -106,6 +106,7 @@
                 mouse.mousePanning = false;
                 mouse.momentum = false;
                 cursor.enablePainting = true;
+                cursor.setPaintConstraint(imageAsset.paintConstraint);
             } else {
                 cursor.enablePainting = false;
                 mouse.mousePanning = true;

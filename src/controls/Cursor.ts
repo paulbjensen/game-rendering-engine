@@ -1,9 +1,9 @@
 import type EventEmitter from "@anephenix/event-emitter";
 import type Camera from "../Camera";
 import type GameMap from "../GameMap";
+import type { PaintConstraint } from "../types";
 
 type Tile = [row: number, col: number];
-type PaintConstraint = "diagonal" | "axial" | "area";
 type AxisLock = "row" | "col" | null;
 
 class Cursor {
@@ -22,7 +22,7 @@ class Cursor {
   private strokeStart: Tile | null = null;
 
   // constraint + axis lock
-  private paintConstraint: PaintConstraint = "diagonal";
+  paintConstraint: PaintConstraint = "diagonal";
   private axisLock: AxisLock = null; // for axial mode only
   private axisLockArmed = false;     // becomes true after first movement
 
@@ -43,7 +43,7 @@ class Cursor {
     this.onMouseDown = this.onMouseDown.bind(this);
     this.onMouseUp = this.onMouseUp.bind(this);
     this.onMouseLeave = this.onMouseLeave.bind(this);
-
+    this.setPaintConstraint = this.setPaintConstraint.bind(this);
     this.calculatePositionOnMap = this.calculatePositionOnMap.bind(this);
   }
 
@@ -61,27 +61,48 @@ class Cursor {
     return `${r}:${c}`;
   }
 
-  // Strict 45° diagonal from a -> snapped toward b
-  private rasterizeDiagonal(a: Tile, b: Tile): Tile[] {
-    const [r0, c0] = a;
-    const [r1, c1] = b;
-    const dr = r1 - r0;
-    const dc = c1 - c0;
-    if (dr === 0 && dc === 0) return [[r0, c0]];
+// Strict 45° diagonal from a -> snapped toward b (supports both diagonal families)
+private rasterizeDiagonal(a: Tile, b: Tile): Tile[] {
+  const [r0, c0] = a;
+  const [r1, c1] = b;
+  const dr = r1 - r0;
+  const dc = c1 - c0;
 
-    const stepR = dr > 0 ? 1 : -1;
-    const stepC = dc > 0 ? 1 : -1;
-    const len = Math.min(Math.abs(dr), Math.abs(dc)); // snap toward b
+  // number of equal row/col steps we can take toward b
+  const len = Math.min(Math.abs(dr), Math.abs(dc));
+  if (len <= 0) return [[r0, c0]];
 
-    const out: Tile[] = [];
-    let r = r0, c = c0;
-    for (let i = 0; i <= len; i++) {
-      out.push([r, c]);
-      r += stepR;
-      c += stepC;
+  // Try all four 45° directions and choose the snapped endpoint closest to b
+  const dirs: Array<[number, number]> = [
+    [ 1,  1],  // TL->BR
+    [ 1, -1],  // BL->TR
+    [-1,  1],  // TR->BL
+    [-1, -1],  // BR->TL
+  ];
+
+  let bestDir: [number, number] = [1, 1];
+  let bestDist = Infinity;
+
+  for (const [vr, vc] of dirs) {
+    const er = r0 + vr * len;
+    const ec = c0 + vc * len;
+    const dist = Math.abs(er - r1) + Math.abs(ec - c1); // L1 distance is fine
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestDir = [vr, vc];
     }
-    return out;
   }
+
+  const [stepR, stepC] = bestDir;
+  const out: Tile[] = [];
+  let r = r0, c = c0;
+  for (let i = 0; i <= len; i++) {
+    out.push([r, c]);
+    r += stepR;
+    c += stepC;
+  }
+  return out;
+}
 
   // Axis-aligned in tile space with axis lock
   private rasterizeAxial(a: Tile, b: Tile): Tile[] {
@@ -237,16 +258,7 @@ class Cursor {
     if (this.isPainting) {
       const tile = this.pixelToTile(this.x, this.y);
       if (tile) {
-        // Determine active constraint for this move:
-        // - Shift forces area (optional shortcut; remove if undesired)
-        // - Alt inverts axial <-> diagonal (not applied to area)
-        let active: PaintConstraint = this.paintConstraint;
-
-        if (event.shiftKey) {
-          active = "area";
-        } else if (active !== "area" && event.altKey) {
-          active = active === "axial" ? "diagonal" : "axial";
-        }
+        const active: PaintConstraint = this.paintConstraint;
 
         this.extendStrokeTo(tile, active);
         this.gameMap?.draw();
