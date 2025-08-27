@@ -3,6 +3,8 @@ import type Camera from "../Camera";
 import type GameMap from "../GameMap";
 
 type Tile = [row: number, col: number];
+type PaintConstraint = "diagonal" | "axial" | "area";
+type AxisLock = "row" | "col" | null;
 
 class Cursor {
   x: number;
@@ -13,11 +15,16 @@ class Cursor {
   eventEmitter: InstanceType<typeof EventEmitter>;
   enablePainting: boolean = false;
 
-  // NEW: painting state
+  // painting state
   private isPainting = false;
   private strokeTiles: Tile[] = [];
-  private strokeSeen = new Set<string>(); // dedupe
-  private lastTile: Tile | null = null;
+  private strokeSeen = new Set<string>();
+  private strokeStart: Tile | null = null;
+
+  // constraint + axis lock
+  private paintConstraint: PaintConstraint = "diagonal";
+  private axisLock: AxisLock = null; // for axial mode only
+  private axisLockArmed = false;     // becomes true after first movement
 
   constructor({
     target,
@@ -33,8 +40,6 @@ class Cursor {
 
     this.onMouseMove = this.onMouseMove.bind(this);
     this.onClick = this.onClick.bind(this);
-
-    // NEW handlers
     this.onMouseDown = this.onMouseDown.bind(this);
     this.onMouseUp = this.onMouseUp.bind(this);
     this.onMouseLeave = this.onMouseLeave.bind(this);
@@ -42,100 +47,156 @@ class Cursor {
     this.calculatePositionOnMap = this.calculatePositionOnMap.bind(this);
   }
 
+  // --- public API to set default tool ---
+  setPaintConstraint(mode: PaintConstraint) {
+    this.paintConstraint = mode;
+  }
+
   hasChanged(previous: number[] | null | undefined, next: number[] | null | undefined) {
     if (!previous || !next) return true;
     return previous[0] !== next[0] || previous[1] !== next[1];
   }
 
-  // ---------- Painting helpers ----------
-
   private tileKey([r, c]: Tile) {
     return `${r}:${c}`;
   }
 
-  // Supercover Bresenham so we cover every tile touched by the line
-  private rasterizeLine(a: Tile, b: Tile): Tile[] {
-    let [r0, c0] = a;
+  // Strict 45° diagonal from a -> snapped toward b
+  private rasterizeDiagonal(a: Tile, b: Tile): Tile[] {
+    const [r0, c0] = a;
     const [r1, c1] = b;
+    const dr = r1 - r0;
+    const dc = c1 - c0;
+    if (dr === 0 && dc === 0) return [[r0, c0]];
 
-    const dr = Math.abs(r1 - r0);
-    const dc = Math.abs(c1 - c0);
-    const sr = r0 < r1 ? 1 : -1;
-    const sc = c0 < c1 ? 1 : -1;
+    const stepR = dr > 0 ? 1 : -1;
+    const stepC = dc > 0 ? 1 : -1;
+    const len = Math.min(Math.abs(dr), Math.abs(dc)); // snap toward b
 
-    let err = dr - dc;
     const out: Tile[] = [];
+    let r = r0, c = c0;
+    for (let i = 0; i <= len; i++) {
+      out.push([r, c]);
+      r += stepR;
+      c += stepC;
+    }
+    return out;
+  }
 
-    while (true) {
-      out.push([r0, c0]);
-      if (r0 === r1 && c0 === c1) break;
+  // Axis-aligned in tile space with axis lock
+  private rasterizeAxial(a: Tile, b: Tile): Tile[] {
+    const [r0, c0] = a;
+    const [r1, c1] = b;
+    const dr = r1 - r0;
+    const dc = c1 - c0;
 
-      const e2 = 2 * err;
-      if (e2 > -dc) {
-        err -= dc;
-        r0 += sr;
+    // Decide/keep lock
+    if (!this.axisLockArmed) {
+      // first movement decides axis by larger magnitude
+      this.axisLock = Math.abs(dr) >= Math.abs(dc) ? "row" : "col";
+      this.axisLockArmed = true;
+    }
+
+    const out: Tile[] = [];
+    if (this.axisLock === "row") {
+      // vary row, fixed col
+      const stepR = dr === 0 ? 0 : dr > 0 ? 1 : -1;
+      for (let r = r0; ; r += stepR) {
+        out.push([r, c0]);
+        if (r === r1 || stepR === 0) break;
       }
-      if (e2 < dr) {
-        err += dr;
-        c0 += sc;
+    } else {
+      // vary col, fixed row
+      const stepC = dc === 0 ? 0 : dc > 0 ? 1 : -1;
+      for (let c = c0; ; c += stepC) {
+        out.push([r0, c]);
+        if (c === c1 || stepC === 0) break;
       }
     }
     return out;
   }
 
-  private addTilesToStroke(tiles: Tile[]) {
-    for (const t of tiles) {
-      const k = this.tileKey(t);
-      if (!this.strokeSeen.has(k)) {
-        this.strokeSeen.add(k);
-        this.strokeTiles.push(t);
-        // Emit incremental updates if you want live preview
-        this.eventEmitter.emit("tiles:paint:delta", t);
+  // NEW: rectangular area AABB between a and b (inclusive)
+  private rasterizeArea(a: Tile, b: Tile): Tile[] {
+    const [r0, c0] = a;
+    const [r1, c1] = b;
+    const rMin = Math.min(r0, r1);
+    const rMax = Math.max(r0, r1);
+    const cMin = Math.min(c0, c1);
+    const cMax = Math.max(c0, c1);
+    const out: Tile[] = [];
+    for (let r = rMin; r <= rMax; r++) {
+      for (let c = cMin; c <= cMax; c++) {
+        out.push([r, c]);
       }
     }
+    return out;
+  }
+
+  private setStrokePreview(tiles: Tile[]) {
+    this.strokeTiles = tiles.slice();
+    this.strokeSeen.clear();
+    for (const t of this.strokeTiles) this.strokeSeen.add(this.tileKey(t));
+    this.eventEmitter.emit("tiles:paint:preview", this.strokeTiles);
   }
 
   private startStrokeAt(tile: Tile) {
     this.isPainting = true;
-    this.strokeTiles = [];
-    this.strokeSeen.clear();
-    this.lastTile = tile;
+    this.strokeStart = tile;
+    this.axisLock = null;
+    this.axisLockArmed = false;
 
-    this.addTilesToStroke([tile]);
+    this.strokeTiles = [tile];
+    this.strokeSeen.clear();
+    this.strokeSeen.add(this.tileKey(tile));
+
     this.eventEmitter.emit("tiles:paint:start", tile);
+    this.eventEmitter.emit("tiles:paint:preview", this.strokeTiles);
   }
 
-  private extendStrokeTo(tile: Tile) {
-    if (!this.isPainting || !this.lastTile) return;
-    if (tile[0] === this.lastTile[0] && tile[1] === this.lastTile[1]) return;
+  private extendStrokeTo(tile: Tile, constraint: PaintConstraint) {
+    if (!this.isPainting || !this.strokeStart) return;
 
-    const segment = this.rasterizeLine(this.lastTile, tile);
-    this.addTilesToStroke(segment);
-    this.lastTile = tile;
+    let segment: Tile[];
+    switch (constraint) {
+      case "axial":
+        segment = this.rasterizeAxial(this.strokeStart, tile);
+        break;
+      case "area":
+        segment = this.rasterizeArea(this.strokeStart, tile);
+        break;
+      default: // case "diagonal"
+        segment = this.rasterizeDiagonal(this.strokeStart, tile);
+        break;
+    }
+
+    // clamp to map
+    const rows = this.gameMap?.rows ?? Infinity;
+    const cols = this.gameMap?.columns ?? Infinity;
+    const clamped = segment.filter(([r, c]) => r >= 0 && c >= 0 && r < rows && c < cols);
+
+    this.setStrokePreview(clamped);
   }
 
   private endStroke() {
     if (!this.isPainting) return;
     this.isPainting = false;
     this.eventEmitter.emit("tiles:paint:end", this.strokeTiles.slice());
-    // You can also emit a single “apply” event if you prefer:
     this.eventEmitter.emit("tiles:apply", this.strokeTiles.slice());
+
+    // reset
+    this.strokeStart = null;
+    this.axisLock = null;
+    this.axisLockArmed = false;
   }
 
   // ---------- Mouse events ----------
 
   private onMouseDown(event: MouseEvent) {
     if (!this.target) return;
-
-    // Only hijack when SHIFT is held and left button is down
-    // if (!(event.button === 0 && event.shiftKey)) return;
-
     if (!this.enablePainting) return;
+    if (event.button !== 0) return; // left button only
 
-    // Only hijack when left button is down
-    if (!(event.button === 0)) return;
-
-    // Prevent the Mouse class from starting a pan
     event.preventDefault();
     event.stopPropagation();
 
@@ -146,29 +207,19 @@ class Cursor {
     const tile = this.pixelToTile(this.x, this.y);
     if (tile) {
       this.startStrokeAt(tile);
-      this.gameMap?.draw(); // optional live redraw
+      this.gameMap?.draw();
     }
   }
 
   private onMouseUp(event: MouseEvent) {
-    if (!this.isPainting) return;
     if (!this.enablePainting) return;
+    if (!this.isPainting) return;
+
     event.preventDefault();
     event.stopPropagation();
+
     this.endStroke();
-    for (const t of this.strokeTiles) {
-      // This is used to apply the tiles onto the map
-      // I think these things are needed:
-      // 1 - To be able to do this without needing to hold down the shift key
-      // 2 - To be able to apply a live preview
-      // 3 - To refine the line so small deviations of the cursor along the line don't end up painting irrelevant tiles
-      // 4 - I'd like to think about potentially drawing in multiple layers to help avoid unnecessary repaints
-      // 5 - I'd also like to potentially find a way to avoid repaint on panning/zooming - see if it is possible
-      // 6 - I'd also like to explore adding items that are more than 1 grid item in width/height/length
-      // 7 - I'd also like to add new/load/save options for the maps - can use localStorage for loading/saving maps
-      this.eventEmitter.emit("click", t);
-    }
-    this.gameMap?.draw(); // final redraw
+    this.gameMap?.draw();
   }
 
   private onMouseLeave() {
@@ -183,17 +234,27 @@ class Cursor {
     this.x = event.clientX - rect.left;
     this.y = event.clientY - rect.top;
 
-    // If painting, extend the stroke along the tiles under the cursor
     if (this.isPainting) {
       const tile = this.pixelToTile(this.x, this.y);
       if (tile) {
-        this.extendStrokeTo(tile);
-        this.gameMap?.draw(); // optional live preview
+        // Determine active constraint for this move:
+        // - Shift forces area (optional shortcut; remove if undesired)
+        // - Alt inverts axial <-> diagonal (not applied to area)
+        let active: PaintConstraint = this.paintConstraint;
+
+        if (event.shiftKey) {
+          active = "area";
+        } else if (active !== "area" && event.altKey) {
+          active = active === "axial" ? "diagonal" : "axial";
+        }
+
+        this.extendStrokeTo(tile, active);
+        this.gameMap?.draw();
       }
-      return; // don't update hover highlight while painting
+      return;
     }
 
-    // Normal hover highlight behaviour
+    // Normal hover highlight
     const currentSelectedTile = this.gameMap?.selectedTile;
     this.calculatePositionOnMap();
     if (this.hasChanged(currentSelectedTile, this.gameMap?.selectedTile)) {
@@ -203,7 +264,6 @@ class Cursor {
 
   onClick(event: MouseEvent) {
     if (!this.target) return;
-    // Ignore click if it came from a paint stroke end (mouse up)
     if (this.isPainting) return;
 
     const rect = this.target.getBoundingClientRect();
@@ -212,7 +272,9 @@ class Cursor {
 
     const currentSelectedTile = this.gameMap?.selectedTile;
     this.calculatePositionOnMap();
-    this.eventEmitter.emit("click", this.gameMap?.selectedTile);
+    for (const tile of this.strokeTiles) {
+        this.eventEmitter.emit("click", tile);
+    }
     if (this.hasChanged(currentSelectedTile, this.gameMap?.selectedTile)) {
       this.gameMap?.draw();
     }
@@ -278,7 +340,7 @@ class Cursor {
     this.target.addEventListener("mousemove", this.onMouseMove);
     this.target.addEventListener("click", this.onClick);
 
-    // NEW: painting events (captured before Mouse pan)
+    // capture phase so we win over the pan handler
     this.target.addEventListener("mousedown", this.onMouseDown, true);
     this.target.addEventListener("mouseup", this.onMouseUp, true);
     this.target.addEventListener("mouseleave", this.onMouseLeave, true);
