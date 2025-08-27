@@ -105,7 +105,9 @@
             if (imageAsset && appMode === 'edit') {
                 mouse.mousePanning = false;
                 mouse.momentum = false;
+                cursor.enablePainting = true;
             } else {
+                cursor.enablePainting = false;
                 mouse.mousePanning = true;
                 mouse.momentum = true;
             }

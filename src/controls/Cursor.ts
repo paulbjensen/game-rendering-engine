@@ -11,6 +11,7 @@ class Cursor {
   gameMap?: GameMap | null;
   camera?: Camera | null;
   eventEmitter: InstanceType<typeof EventEmitter>;
+  enablePainting: boolean = false;
 
   // NEW: painting state
   private isPainting = false;
@@ -127,7 +128,12 @@ class Cursor {
     if (!this.target) return;
 
     // Only hijack when SHIFT is held and left button is down
-    if (!(event.button === 0 && event.shiftKey)) return;
+    // if (!(event.button === 0 && event.shiftKey)) return;
+
+    if (!this.enablePainting) return;
+
+    // Only hijack when left button is down
+    if (!(event.button === 0)) return;
 
     // Prevent the Mouse class from starting a pan
     event.preventDefault();
@@ -146,6 +152,7 @@ class Cursor {
 
   private onMouseUp(event: MouseEvent) {
     if (!this.isPainting) return;
+    if (!this.enablePainting) return;
     event.preventDefault();
     event.stopPropagation();
     this.endStroke();
@@ -165,6 +172,7 @@ class Cursor {
   }
 
   private onMouseLeave() {
+    if (!this.enablePainting) return;
     if (this.isPainting) this.endStroke();
   }
 
