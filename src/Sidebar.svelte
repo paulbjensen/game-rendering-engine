@@ -1,13 +1,13 @@
 <script lang="ts">
     import type { ImageAsset } from './types';
 
-    const { imageAssetSet, eventEmitter, selectedImageAsset } = $props();
+    const { imageAssetSet, eventEmitter, selectedImageAsset, hidden} = $props();
 
     const sections = [
         { title: "Terrain", type: "terrain" },
         { title: "Roads", type: "road" },
         { title: "Buildings", type: "building" },
-        // { title: "Random", type: "random" }
+        { title: "Random", type: "random" }
     ];
 
 </script>
@@ -16,9 +16,9 @@
     #sidebar {
         font-family: Arial, Helvetica, sans-serif;
         position: absolute;
-        top: 40px;
-        left: 40px;
-        width: 280px;
+        top: 20px;
+        left: 20px;
+        width: 230px;
         display: grid;
         background: rgba(0,0,0,0.1);
         color: white;
@@ -27,6 +27,10 @@
         box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
         border-radius: 8px;
         backdrop-filter: blur(10px);
+    }
+
+    #sidebar.hidden {
+        display: none;
     }
 
     .title {
@@ -63,14 +67,19 @@
         border-radius: 4px;
     }
 
+    .section-content button:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+
     .section-content button.selected {
+        background: rgba(255, 255, 255, 0.1);
         border: solid 1px #00ffff;
         box-shadow: 0 0 10px #00ffff;
     }
 </style>
 
-<div id="sidebar">
-    <div class="title">Map Editor</div>
+<div id="sidebar" class:hidden={hidden}>
+    <div class="title">Editor</div>
     {#each sections as section}
         <div class="section">
         <div class="section-title">{section.title}</div>

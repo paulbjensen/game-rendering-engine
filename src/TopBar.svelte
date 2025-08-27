@@ -8,7 +8,7 @@
         position: absolute;
         grid-template-columns: auto auto;
         gap: 8px;
-        top: 40px;
+        top: 20px;
         left: calc(50% - 94px);
         width: 140px;
         display: grid;

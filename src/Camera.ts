@@ -49,6 +49,10 @@ class Camera {
         if (this.maxZoomLevel !== null && level > this.maxZoomLevel) {
             level = this.maxZoomLevel;
         }
+        const zoomFactor = level / this.zoomLevel;
+        this.panX *= zoomFactor;
+        this.panY *= zoomFactor;
+
         this.zoomLevel = level;
         this.eventEmitter.emit('cameraUpdated', { panX: this.panX, panY: this.panY, zoomLevel: this.zoomLevel });
     }

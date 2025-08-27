@@ -6,6 +6,14 @@ interface MouseOptions {
     mousePanning?: boolean;
 }
 
+/* 
+    Thoughts
+
+    This mouse class is very attached to navigating the map
+
+    I wonder if it should be renamed, or abstracted in such a way that different behaviours can occur and this simply triggers them via events.
+*/
+
 class Mouse {
     target?: HTMLElement | null;
     eventEmitter: InstanceType<typeof EventEmitter>;
@@ -80,7 +88,9 @@ class Mouse {
         const mouseX = event.clientX - rect.left;
         const mouseY = event.clientY - rect.top;
         const dx = mouseX - this.lastMouseX;
-        const dy = mouseY - this.lastMouseY;
+        const dy = mouseY - this.lastMouseY
+        // This is the eventEmitter event that triggers panning and zooming
+        // Perhaps this is the bit that needs to be abstracted out
         this.eventEmitter.emit('pan', dx, dy);
         this.velocityX = dx;
         this.velocityY = dy;

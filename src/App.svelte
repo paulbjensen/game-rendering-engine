@@ -13,7 +13,6 @@
 	import ImageAssetSet from './assets/ImageAssetSet';
     import Sidebar from './Sidebar.svelte';
     import TopBar from './TopBar.svelte';
-	import app from './main';
 
     const fpsResult = fps();
 
@@ -173,8 +172,8 @@
     <canvas id="map">
         Your browser does not support the canvas element.
     </canvas>
-    {#if imageAssetSet && appMode==="edit"}
-        <Sidebar {imageAssetSet} {eventEmitter} {selectedImageAsset} />
+    {#if imageAssetSet}
+        <Sidebar {imageAssetSet} {eventEmitter} {selectedImageAsset} hidden={appMode !== "edit"} />
     {/if}
     <TopBar {appMode} {eventEmitter} />
 </main>
