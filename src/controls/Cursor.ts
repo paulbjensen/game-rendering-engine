@@ -61,47 +61,30 @@ class Cursor {
     return `${r}:${c}`;
   }
 
-// Strict 45° diagonal from a -> snapped toward b (supports both diagonal families)
 private rasterizeDiagonal(a: Tile, b: Tile): Tile[] {
-  const [r0, c0] = a;
-  const [r1, c1] = b;
-  const dr = r1 - r0;
-  const dc = c1 - c0;
+    const out: Tile[] = [];
 
-  // number of equal row/col steps we can take toward b
-  const len = Math.min(Math.abs(dr), Math.abs(dc));
-  if (len <= 0) return [[r0, c0]];
-
-  // Try all four 45° directions and choose the snapped endpoint closest to b
-  const dirs: Array<[number, number]> = [
-    [ 1,  1],  // TL->BR
-    [ 1, -1],  // BL->TR
-    [-1,  1],  // TR->BL
-    [-1, -1],  // BR->TL
-  ];
-
-  let bestDir: [number, number] = [1, 1];
-  let bestDist = Infinity;
-
-  for (const [vr, vc] of dirs) {
-    const er = r0 + vr * len;
-    const ec = c0 + vc * len;
-    const dist = Math.abs(er - r1) + Math.abs(ec - c1); // L1 distance is fine
-    if (dist < bestDist) {
-      bestDist = dist;
-      bestDir = [vr, vc];
+    // Is the row the same?
+    if (a[0] === b[0]) {
+        const [row, col0] = a;
+        const [, col1] = b;
+        const step = col1 > col0 ? 1 : -1;
+        for (let c = col0; c !== col1 + step; c += step) {
+            out.push([row, c]);
+        }
+        return out;
+    // Is the column the same?
+    } else if (a[1] === b[1]) {
+        const [row0, col] = a;
+        const [row1] = b;
+        const step = row1 > row0 ? 1 : -1;
+        for (let r = row0; r !== row1 + step; r += step) {
+            out.push([r, col]);
+        }
+        return out;
+    } else {
+        // return this.rasterizeArea(a, b);
     }
-  }
-
-  const [stepR, stepC] = bestDir;
-  const out: Tile[] = [];
-  let r = r0, c = c0;
-  for (let i = 0; i <= len; i++) {
-    out.push([r, c]);
-    r += stepR;
-    c += stepC;
-  }
-  return out;
 }
 
   // Axis-aligned in tile space with axis lock
@@ -155,6 +138,9 @@ private rasterizeDiagonal(a: Tile, b: Tile): Tile[] {
   }
 
   private setStrokePreview(tiles: Tile[]) {
+    tiles.forEach(tile => {
+        this.eventEmitter.emit("click", tile)
+    })
     this.strokeTiles = tiles.slice();
     this.strokeSeen.clear();
     for (const t of this.strokeTiles) this.strokeSeen.add(this.tileKey(t));
@@ -179,6 +165,19 @@ private rasterizeDiagonal(a: Tile, b: Tile): Tile[] {
     if (!this.isPainting || !this.strokeStart) return;
 
     let segment: Tile[];
+    /*
+      Note - what I want to do is the following:
+
+      - Track the starting tile
+      - Track the ending tile
+
+      If the row of the start and end tile is the same, it is diagonal on that row
+      If the column of the start and end tile is the same, it is diagonal on that column
+
+      If they are not aligned, then it is an area
+    */
+    console.log('constraint is', constraint)
+
     switch (constraint) {
       case "axial":
         segment = this.rasterizeAxial(this.strokeStart, tile);
@@ -190,6 +189,8 @@ private rasterizeDiagonal(a: Tile, b: Tile): Tile[] {
         segment = this.rasterizeDiagonal(this.strokeStart, tile);
         break;
     }
+
+    console.log(`Stroke from ${this.strokeStart} to ${tile} (${constraint}) → ${segment}`);
 
     // clamp to map
     const rows = this.gameMap?.rows ?? Infinity;

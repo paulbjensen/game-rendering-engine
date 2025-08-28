@@ -131,7 +131,6 @@
         eventEmitter.on('selectImageAsset', selectImageAsset);
         eventEmitter.on('click', (tile: [number, number] | null) => {
             if (tile && selectedImageAsset && gameMap) {
-                console.log('Placing tile', selectedImageAsset, 'at', tile);
                 if (Array.isArray(tile)) {
                     gameMap.map[tile[0]][tile[1]] = [0, selectedImageAsset.code];
                 } else {
