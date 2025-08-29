@@ -138,7 +138,6 @@ class Camera {
                         this.panY -= panSpeed / 2;
                     }
                 }
-                // - TODO - this is where we call drawMap
                 this.eventEmitter.emit('cameraUpdated', { panX: this.panX, panY: this.panY, zoomLevel: this.zoomLevel });
                 /*
                      NOTE - we assume the hooks complete before the next call 

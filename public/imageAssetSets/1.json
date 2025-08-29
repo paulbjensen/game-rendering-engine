@@ -25,5 +25,6 @@
     { "code": 23, "name": "sand-corner-top", "type": "terrain", "paintConstraint": "area", "imageUrl": "/img/sand-corner-top.png", "width": 64, "height": 32 },
     { "code": 24, "name": "sand-corner-left", "type": "terrain", "paintConstraint": "area", "imageUrl": "/img/sand-corner-left.png", "width": 64, "height": 32 },
     { "code": 25, "name": "sand-corner-bottom", "type": "terrain", "paintConstraint": "area", "imageUrl": "/img/sand-corner-bottom.png", "width": 64, "height": 32 },
-    { "code": 26, "name": "sand-corner-right", "type": "terrain", "paintConstraint": "area", "imageUrl": "/img/sand-corner-right.png", "width": 64, "height": 32 }
+    { "code": 26, "name": "sand-corner-right", "type": "terrain", "paintConstraint": "area", "imageUrl": "/img/sand-corner-right.png", "width": 64, "height": 32 },
+    { "code": 27, "name": "tesco-shop", "type": "building", "paintConstraint": "area", "imageUrl": "/img/tesco-shop.png", "width": 64, "height": 64 }
 ]

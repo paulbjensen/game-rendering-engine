@@ -82,9 +82,8 @@ private rasterizeDiagonal(a: Tile, b: Tile): Tile[] {
             out.push([r, col]);
         }
         return out;
-    } else {
-        // return this.rasterizeArea(a, b);
     }
+    return out;
 }
 
   // Axis-aligned in tile space with axis lock

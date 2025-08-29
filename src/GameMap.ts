@@ -140,7 +140,6 @@ class GameMap {
         }
 
         if (this.selectedTile) {
-            // TODO - change this to the selectedTile values
             this.drawCursorAt(...this.selectedTile);
         }
 
