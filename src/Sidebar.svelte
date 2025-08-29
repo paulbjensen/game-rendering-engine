@@ -16,9 +16,10 @@
     #sidebar {
         font-family: Arial, Helvetica, sans-serif;
         position: absolute;
-        top: 20px;
+        top: 80px;
         left: 20px;
         width: 230px;
+        height: calc(100vh - 140px);
         display: grid;
         background: rgba(0,0,0,0.1);
         color: white;
@@ -27,6 +28,10 @@
         box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
         border-radius: 8px;
         backdrop-filter: blur(10px);
+    }
+
+    #sections {
+        overflow-y: scroll;
     }
 
     #sidebar.hidden {
@@ -80,21 +85,22 @@
 
 <div id="sidebar" class:hidden={hidden}>
     <div class="title">Editor</div>
-    {#each sections as section}
-        <div class="section">
-        <div class="section-title">{section.title}</div>
-        <div class="section-content">
-            {#each imageAssetSet.imageAssets.filter((imageAsset: ImageAsset) => imageAsset.type === section.type) as imageAsset}
-                <button 
-                    type="button"
-                    onclick={() => eventEmitter.emit('selectImageAsset', imageAsset.code !== selectedImageAsset?.code ? imageAsset : null)}
-                    class={selectedImageAsset?.code === imageAsset.code ? 'selected' : ''}
-                >
-                    <img src={imageAsset.imageUrl} alt={imageAsset.name}/>
-                </button>
-            {/each}
-        </div>
-        </div>
-
-    {/each}
+    <div id="sections">
+        {#each sections as section}
+            <div class="section">
+                <div class="section-title">{section.title}</div>
+                <div class="section-content">
+                    {#each imageAssetSet.imageAssets.filter((imageAsset: ImageAsset) => imageAsset.type === section.type) as imageAsset}
+                        <button 
+                            type="button"
+                            onclick={() => eventEmitter.emit('selectImageAsset', imageAsset.code !== selectedImageAsset?.code ? imageAsset : null)}
+                            class={selectedImageAsset?.code === imageAsset.code ? 'selected' : ''}
+                        >
+                            <img src={imageAsset.imageUrl} alt={imageAsset.name}/>
+                        </button>
+                    {/each}
+                </div>
+            </div>
+        {/each}
+    </div>
 </div>

@@ -17,3 +17,4 @@
 - [x] Add a script to work out what the size of the dist is and measure it
 - [ ] Add husky hooks
 - [ ] Setup unit tests
+- [ ] use dvh for the height of the canvas to support tablet devices
