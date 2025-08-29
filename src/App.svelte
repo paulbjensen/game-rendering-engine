@@ -181,6 +181,12 @@
         width:100vw;
         height:100vh;
     }
+
+    #logo {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+    }
 </style>
 
 <main>
@@ -188,6 +194,10 @@
     <canvas id="map">
         Your browser does not support the canvas element.
     </canvas>
+    <div id="logo">
+        <img src="/img/logo.svg" width="200" alt="Babsland logo">
+    </div>
+
     {#if imageAssetSet}
         <Sidebar {imageAssetSet} {eventEmitter} {selectedImageAsset} hidden={appMode !== "edit"} />
     {/if}

@@ -46,12 +46,30 @@
     ul {
         font-size: 12px;
     }
+
+    #warning {
+        background: repeating-linear-gradient(
+            135deg,
+            rgb(255, 221, 0),
+            rgb(255, 221, 0) 10px,
+            black 10px,
+            black 20px
+        );
+        color: white;
+        text-shadow: 0px 0px 2px black, 0px 0px 10px black;
+        font-weight: bold;
+        padding: 8px 4px;
+        border-radius: 4px;
+        text-transform: uppercase;
+        box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+    }
 </style>
 
 <div id="welcome-screen-background">
     <div id="welcome-modal">
-        <img src="/img/logo.png" alt="Babsland logo">
-        <p>Warning: Work in Progress</p>
+        <h1>Welcome to Babsland</h1>
+        <p>Create your own maps, and soon your own adventures!</p>
+        <div id="warning">Warning: Work in Progress</div>
         <h2>
             Keyboard controls:
         </h2>
