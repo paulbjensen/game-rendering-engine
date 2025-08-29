@@ -13,6 +13,7 @@
 	import ImageAssetSet from './assets/ImageAssetSet';
     import Sidebar from './Sidebar.svelte';
     import TopBar from './TopBar.svelte';
+	import WelcomeScreen from './WelcomeScreen.svelte';
 
     const fpsResult = fps();
 
@@ -36,6 +37,8 @@
         }
         appMode = mode;
     };
+
+    let hideWelcomeScreen = $state(false);
 
     // Keyboard controls specified here
     const keyboardOptions: KeyboardOptions = {
@@ -189,4 +192,7 @@
         <Sidebar {imageAssetSet} {eventEmitter} {selectedImageAsset} hidden={appMode !== "edit"} />
     {/if}
     <TopBar {appMode} {eventEmitter} />
+    {#if !hideWelcomeScreen}
+        <WelcomeScreen onClick={() => hideWelcomeScreen = true} />
+    {/if}
 </main>
