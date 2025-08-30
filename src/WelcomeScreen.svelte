@@ -43,10 +43,6 @@
         background: rgba(255, 255, 255, 0.1);
     }
 
-    ul {
-        font-size: 12px;
-    }
-
     #warning {
         background: repeating-linear-gradient(
             135deg,
@@ -94,17 +90,33 @@
         font-size: 12px;
         color: white;
     }
+
+    #controls-guide {
+       display: grid;
+       grid-template-columns: 1fr 1fr;
+       gap: 16px;
+    }
+
+    #mouse-controls p {
+        font-size: 12px;
+    }
+
+    @media (max-width: 600px) {
+        #keyboard-controls, #mouse-controls {
+            display: none;
+        }
+    }
 </style>
 
 <div id="welcome-screen-background">
     <div id="welcome-modal">
-        <h1>Welcome to Babsland</h1>
+        <h1>Welcome to Babsland!</h1>
         <p>Create your own maps, and soon your own adventures!</p>
         <div id="warning">Warning: Work in Progress</div>
         <div id="controls-guide">
             <div id="keyboard-controls">
                 <h2>
-                    Keyboard controls:
+                    Keyboard
                 </h2>
                 <div class="keyboard-control">
                     <div class="key">&uparrow;</div>
@@ -139,15 +151,18 @@
                     <div class="action">Recenter</div>
                 </div>
             </div>
+            <div id="mouse-controls">
+                <h2>
+                    Mouse
+                </h2>
+                <h3>Navigation</h3>
+                    <p><strong>Click and drag:</strong> Move around the map</p>
+                    <p><strong>Scroll wheel:</strong> Zoom in / Zoom out</p>
+                <h3>Editor</h3>
+                <p>Click on items in the editor to select/deselect them</p>
+                <p>Then click on the map and drag to add them to the map</p>
+            </div>
         </div>
-        <h2>
-            Mouse controls:
-        </h2>
-        <ul>
-            <li><strong>Click and drag:</strong> Pan the map</li>
-            <li><strong>Scroll wheel:</strong> Zoom in/out</li>
-
-        </ul>
 
         <div>
             <button onclick={onClick}>Start</button>
