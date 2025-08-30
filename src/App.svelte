@@ -204,6 +204,12 @@
         top: 20px;
         left: 20px;
     }
+
+    @media (max-width: 600px) {
+        #logo {
+            display: none;
+        }
+    }
 </style>
 
 <main>
