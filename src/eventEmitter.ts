@@ -14,6 +14,8 @@ type MyEvents = EventMap & {
   selectImageAsset: (imageAsset: ImageAsset) => void;
   click: (tile: [number, number] | null) => void;
   setAppMode: (mode: AppMode) => void;
+  loadGame: () => void;
+  saveGame: () => void;
 }
 
 // Create an instance of the event emitter class with type safety

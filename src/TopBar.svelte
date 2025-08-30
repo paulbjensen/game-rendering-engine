@@ -90,6 +90,24 @@
         backdrop-filter: blur(10px);
     }
 
+    #load-save-bar {
+        font-family: Arial, Helvetica, sans-serif;
+        position: absolute;
+        grid-template-columns: auto;
+        gap: 8px;
+        bottom: 180px;
+        right: 20px;
+        width: 140px;
+        display: grid;
+        background: rgba(0,0,0,0.1);
+        color: white;
+        padding: 8px;
+        border: solid 1px rgba(255, 255, 255, 0.3);
+        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+        backdrop-filter: blur(10px);
+    }
+
     button {
         background: transparent;
         border: none;
@@ -128,5 +146,9 @@
         <button onclick={() => eventEmitter.emit('zoomOut')}>-</button>
         <button onclick={() => eventEmitter.emit('resetZoom')}>Reset</button>
         <button onclick={() => eventEmitter.emit('zoomIn')}>+</button>
+    </div>
+    <div id="load-save-bar">
+        <button onclick={() => eventEmitter.emit('saveGame')}>Save</button>
+        <button onclick={() => eventEmitter.emit('loadGame')}>Load</button>
     </div>
 {/if}

@@ -14,6 +14,7 @@
     import Sidebar from './Sidebar.svelte';
     import TopBar from './TopBar.svelte';
 	import WelcomeScreen from './WelcomeScreen.svelte';
+    import GameManager from './GameManager';
 
     const fpsResult = fps();
 
@@ -21,6 +22,7 @@
     const touch = new Touch({ eventEmitter });
     const mouse = new Mouse({ eventEmitter });
     const cursor = new Cursor({eventEmitter});
+    const gameManager = new GameManager();
     let gameMap: GameMap | null = null;
 
     let imageAssetSet: ImageAssetSet | null = $state(null);
@@ -143,6 +145,21 @@
             }
         });
         eventEmitter.on('setAppMode', setAppmode);
+        eventEmitter.on('saveGame', () => {
+            if (gameMap) {
+                const mapDataStr = JSON.stringify(gameMap.map);
+                localStorage.setItem('savedMap', mapDataStr);
+                alert('Game saved!');
+            }
+        });
+        eventEmitter.on('loadGame', () => {
+            const mapDataStr = localStorage.getItem('savedMap');
+            if (mapDataStr && gameMap) {
+                const mapData = JSON.parse(mapDataStr);
+                gameMap.map = mapData;
+                alert('Game loaded!');
+            }
+        });
 
         // Load map assets then resize the canvas once loaded
         await gameMap?.load();
