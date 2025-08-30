@@ -63,6 +63,37 @@
         text-transform: uppercase;
         box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
     }
+
+    #keyboard-controls {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .keyboard-control {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        margin: 4px 0;
+        width: 200px;
+    }
+
+    .key {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+        margin-right: 8px;
+        font-size: 12px;
+        width: 25px;
+        height: 25px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .action {
+        font-size: 12px;
+        color: white;
+    }
 </style>
 
 <div id="welcome-screen-background">
@@ -70,16 +101,45 @@
         <h1>Welcome to Babsland</h1>
         <p>Create your own maps, and soon your own adventures!</p>
         <div id="warning">Warning: Work in Progress</div>
-        <h2>
-            Keyboard controls:
-        </h2>
-
-            <ul>
-                <li><strong>Arrow keys:</strong> Pan the map</li>
-                <li><strong>+</strong> / <strong>-</strong>: Zoom in/out</li>
-                <li><strong>0</strong>: Reset zoom</li>
-                <li><strong>C</strong>: Recenter the view</li>
-            </ul>
+        <div id="controls-guide">
+            <div id="keyboard-controls">
+                <h2>
+                    Keyboard controls:
+                </h2>
+                <div class="keyboard-control">
+                    <div class="key">&uparrow;</div>
+                    <div class="action">Move Up</div>
+                </div>
+                <div class="keyboard-control">
+                    <div class="key">&downarrow;</div>
+                    <div class="action">Move Down</div>
+                </div>
+                <div class="keyboard-control">
+                    <div class="key">&leftarrow;</div>
+                    <div class="action">Move Left</div>
+                </div>
+                <div class="keyboard-control">
+                    <div class="key">&rightarrow;</div>
+                    <div class="action">Move Right</div>
+                </div>
+                <div class="keyboard-control">
+                    <div class="key">+</div>
+                    <div class="action">Zoom In</div>
+                </div>
+                <div class="keyboard-control">
+                    <div class="key">-</div>
+                    <div class="action">Zoom Out</div>
+                </div>
+                <div class="keyboard-control">
+                    <div class="key">0</div>
+                    <div class="action">Reset Zoom</div>
+                </div>
+                <div class="keyboard-control">
+                    <div class="key">C</div>
+                    <div class="action">Recenter</div>
+                </div>
+            </div>
+        </div>
         <h2>
             Mouse controls:
         </h2>

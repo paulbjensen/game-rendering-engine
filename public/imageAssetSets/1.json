@@ -11,7 +11,7 @@
     { "code": 9, "name": "road-with-markings-tl-br", "type": "road", "paintConstraint": "diagonal", "imageUrl": "/img/road-with-markings-tl-br.png", "width": 64, "height": 32 },
     { "code": 10, "name": "road-with-markings-bl-tr", "type": "road", "paintConstraint": "diagonal", "imageUrl": "/img/road-with-markings-bl-tr.png", "width": 64, "height": 32 },
     { "code": 11, "name": "sand", "type": "terrain", "paintConstraint": "area", "imageUrl": "/img/sand.png", "width": 64, "height": 32 },
-    { "code": 12, "name": "english-townhouse", "type": "building", "paintConstraint": "area", "imageUrl": "/img/english-townhouse.png", "width": 64, "height": 64 },
+    { "code": 12, "name": "english-townhouse", "type": "building", "paintConstraint": "area", "imageUrl": "/img/english-townhouse.png", "width": 64, "height": 128 },
     { "code": 13, "name": "cornershop", "type": "building", "paintConstraint": "area", "imageUrl": "/img/cornershop.png", "width": 64, "height": 64 },
     { "code": 14, "name": "house", "type": "building", "paintConstraint": "area", "imageUrl": "/img/house.png", "width": 64, "height": 64 },
     { "code": 15, "name": "road-corner-top", "type": "road", "paintConstraint": "diagonal", "imageUrl": "/img/road-corner-top.png", "width": 64, "height": 32 },
