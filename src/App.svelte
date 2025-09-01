@@ -14,7 +14,7 @@
     import Sidebar from './Sidebar.svelte';
     import TopBar from './TopBar.svelte';
 	import WelcomeScreen from './WelcomeScreen.svelte';
-    import GameManager from './GameManager';
+    import GameManager from './lib/GameManager/GameManager';
 
     const fpsResult = fps();
 
