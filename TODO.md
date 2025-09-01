@@ -15,6 +15,6 @@
 - [ ] Work out how to implement physics maps that so that characters cannot walk through objects like walls
 - [x] Work out what eventEmitter mappings to setup so that components can be decoupled and re-used
 - [x] Add a script to work out what the size of the dist is and measure it
-- [ ] Add husky hooks
-- [ ] Setup unit tests
-- [ ] use dvh for the height of the canvas to support tablet devices
+- [x] Add husky hooks
+- [x] Setup unit tests
+- [x] use dvh for the height of the canvas to support tablet devices

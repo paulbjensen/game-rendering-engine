@@ -19,7 +19,7 @@
         top: 80px;
         left: 20px;
         width: 230px;
-        height: calc(100vh - 140px);
+        height: calc(100dvh - 140px);
         display: grid;
         background: rgba(0,0,0,0.1);
         color: white;
