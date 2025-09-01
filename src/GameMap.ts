@@ -72,6 +72,11 @@ class GameMap {
 		await delayUntil(() => this.hasLoaded());
 	}
 
+	// Updates the map using the structuredClone
+	updateMap(map: MapData) {
+		this.map = structuredClone(map);
+	}
+
 	getMapCoords() {
 		const offsetX =
 			this.rows *

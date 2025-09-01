@@ -147,17 +147,22 @@
         eventEmitter.on('setAppMode', setAppmode);
         eventEmitter.on('saveGame', () => {
             if (gameMap) {
-                const mapDataStr = JSON.stringify(gameMap.map);
-                localStorage.setItem('savedMap', mapDataStr);
+                gameManager.save('currentGame', gameMap.map);
                 alert('Game saved!');
             }
         });
         eventEmitter.on('loadGame', () => {
-            const mapDataStr = localStorage.getItem('savedMap');
-            if (mapDataStr && gameMap) {
-                const mapData = JSON.parse(mapDataStr);
-                gameMap.map = mapData;
-                alert('Game loaded!');
+            console.log("Loading game");
+            const game = gameManager.load('currentGame');
+            console.log("Loaded game:", game);
+            if (game && gameMap) {
+                console.log(game.data[0][0]);
+                console.log(gameMap.map[0][0]);
+                console.log("Applying map data and redraw");
+                gameMap.updateMap(game.data);
+                console.log("Map data and redraw applied");
+                console.log(gameMap.map[0][0]);
+                gameMap.draw();
             }
         });
 

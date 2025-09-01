@@ -28,16 +28,14 @@ class GameManager {
 
 	load(name: string) {
 		const game = this.games.find((g) => g.name === name);
-		if (game) {
-			return game;
-		}
+		if (game) return game;
 		throw new Error("Game not found");
 	}
 
 	save(name: string, data: MapData) {
 		const game = this.games.find((g) => g.name === name);
 		if (game) {
-			Object.assign(game, data);
+			Object.assign(game, { data });
 		} else {
 			this.games.push({ name, data });
 		}

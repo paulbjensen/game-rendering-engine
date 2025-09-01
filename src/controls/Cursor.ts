@@ -178,8 +178,6 @@ class Cursor {
 
       If they are not aligned, then it is an area
     */
-		console.log("constraint is", constraint);
-
 		switch (constraint) {
 			case "axial":
 				segment = this.rasterizeAxial(this.strokeStart, tile);
@@ -191,10 +189,6 @@ class Cursor {
 				segment = this.rasterizeDiagonal(this.strokeStart, tile);
 				break;
 		}
-
-		console.log(
-			`Stroke from ${this.strokeStart} to ${tile} (${constraint}) → ${segment}`,
-		);
 
 		// clamp to map
 		const rows = this.gameMap?.rows ?? Infinity;
