@@ -1,71 +1,83 @@
-import type EventEmitter from '@anephenix/event-emitter';
-import type { Direction } from './types';
+import type EventEmitter from "@anephenix/event-emitter";
+import type { Direction } from "./types";
 
 class Camera {
-    zoomLevel: number;
-    panX: number;
-    panY: number;
-    activePanningDirections: Direction[];
-    panningInterval: ReturnType<typeof setInterval> | null;
-    eventEmitter: InstanceType<typeof EventEmitter>;
-    maxZoomLevel: number | null;
-    minZoomLevel: number | null;
+	zoomLevel: number;
+	panX: number;
+	panY: number;
+	activePanningDirections: Direction[];
+	panningInterval: ReturnType<typeof setInterval> | null;
+	eventEmitter: InstanceType<typeof EventEmitter>;
+	maxZoomLevel: number | null;
+	minZoomLevel: number | null;
 
-    constructor({eventEmitter, minZoomLevel, maxZoomLevel}: {eventEmitter: InstanceType<typeof EventEmitter>, minZoomLevel?: number, maxZoomLevel?: number}) {
-        this.eventEmitter = eventEmitter;
-        this.zoomLevel = 1;
-        this.maxZoomLevel = maxZoomLevel || null;
-        this.minZoomLevel = minZoomLevel || null;
-        this.panX = 0;
-        this.panY = 0;
-           /* Used to track if we are panning */
-        this.panningInterval = null;
-        /*
+	constructor({
+		eventEmitter,
+		minZoomLevel,
+		maxZoomLevel,
+	}: {
+		eventEmitter: InstanceType<typeof EventEmitter>;
+		minZoomLevel?: number;
+		maxZoomLevel?: number;
+	}) {
+		this.eventEmitter = eventEmitter;
+		this.zoomLevel = 1;
+		this.maxZoomLevel = maxZoomLevel || null;
+		this.minZoomLevel = minZoomLevel || null;
+		this.panX = 0;
+		this.panY = 0;
+		/* Used to track if we are panning */
+		this.panningInterval = null;
+		/*
             Used to track the directions in which the camera will pan.
 
             We need to track multiple direction in case the user wants
             to pan diagonally by holding down two arrow keys at once.
         */
-        this.activePanningDirections = [];
-        this.startPanning = this.startPanning.bind(this);
-        this.stopPanning = this.stopPanning.bind(this);
-        this.zoomIn = this.zoomIn.bind(this);
-        this.zoomOut = this.zoomOut.bind(this);
-        this.resetZoom = this.resetZoom.bind(this);
-        this.resetPan = this.resetPan.bind(this);
-        this.addPan = this.addPan.bind(this);
-        this.setZoom = this.setZoom.bind(this);
-    }
+		this.activePanningDirections = [];
+		this.startPanning = this.startPanning.bind(this);
+		this.stopPanning = this.stopPanning.bind(this);
+		this.zoomIn = this.zoomIn.bind(this);
+		this.zoomOut = this.zoomOut.bind(this);
+		this.resetZoom = this.resetZoom.bind(this);
+		this.resetPan = this.resetPan.bind(this);
+		this.addPan = this.addPan.bind(this);
+		this.setZoom = this.setZoom.bind(this);
+	}
 
-    /*
+	/*
         Sets the zoom level to the specified value.
 
         @param level The new zoom level.
     */
-    setZoom(level:number) {
-        if (this.minZoomLevel !== null && level < this.minZoomLevel) {
-            level = this.minZoomLevel;
-        }
-        if (this.maxZoomLevel !== null && level > this.maxZoomLevel) {
-            level = this.maxZoomLevel;
-        }
-        const zoomFactor = level / this.zoomLevel;
-        this.panX *= zoomFactor;
-        this.panY *= zoomFactor;
+	setZoom(level: number) {
+		if (this.minZoomLevel !== null && level < this.minZoomLevel) {
+			level = this.minZoomLevel;
+		}
+		if (this.maxZoomLevel !== null && level > this.maxZoomLevel) {
+			level = this.maxZoomLevel;
+		}
+		const zoomFactor = level / this.zoomLevel;
+		this.panX *= zoomFactor;
+		this.panY *= zoomFactor;
 
-        this.zoomLevel = level;
-        this.eventEmitter.emit('cameraUpdated', { panX: this.panX, panY: this.panY, zoomLevel: this.zoomLevel });
-    }
+		this.zoomLevel = level;
+		this.eventEmitter.emit("cameraUpdated", {
+			panX: this.panX,
+			panY: this.panY,
+			zoomLevel: this.zoomLevel,
+		});
+	}
 
-    zoomIn() {
-        this.setZoom(this.zoomLevel * 1.1);
-    }
+	zoomIn() {
+		this.setZoom(this.zoomLevel * 1.1);
+	}
 
-    zoomOut() {
-        this.setZoom(this.zoomLevel / 1.1);
-    }
+	zoomOut() {
+		this.setZoom(this.zoomLevel / 1.1);
+	}
 
-    /*
+	/*
         Adds the specified amount to the camera's pan offsets.
 
         @param dx The amount to pan in the x direction.
@@ -76,92 +88,108 @@ class Camera {
         rather than replacing it completely.
 
     */
-    addPan(dx:number, dy:number) {
-        this.panX += dx;
-        this.panY += dy;
-        this.eventEmitter.emit('cameraUpdated', { panX: this.panX, panY: this.panY, zoomLevel: this.zoomLevel });
-    }
+	addPan(dx: number, dy: number) {
+		this.panX += dx;
+		this.panY += dy;
+		this.eventEmitter.emit("cameraUpdated", {
+			panX: this.panX,
+			panY: this.panY,
+			zoomLevel: this.zoomLevel,
+		});
+	}
 
-    /*
+	/*
         Resets both the zoom level and pan offsets to their default values.
     */
-    reset() {
-        this.zoomLevel = 1;
-        this.panX = 0;
-        this.panY = 0;
-    }
+	reset() {
+		this.zoomLevel = 1;
+		this.panX = 0;
+		this.panY = 0;
+	}
 
-    /*
+	/*
         Resets the camera's zoom level to the default value.
     */
-    resetZoom() {
-        this.zoomLevel = 1;
-        this.eventEmitter.emit('cameraUpdated', { panX: this.panX, panY: this.panY, zoomLevel: this.zoomLevel });
-    }
+	resetZoom() {
+		this.zoomLevel = 1;
+		this.eventEmitter.emit("cameraUpdated", {
+			panX: this.panX,
+			panY: this.panY,
+			zoomLevel: this.zoomLevel,
+		});
+	}
 
-    /*
+	/*
         Resets the camera's pan offsets to zero.
     */
-    resetPan() {
-        this.panX = 0;
-        this.panY = 0;
-        this.eventEmitter.emit('cameraUpdated', { panX: this.panX, panY: this.panY, zoomLevel: this.zoomLevel });
-    }
+	resetPan() {
+		this.panX = 0;
+		this.panY = 0;
+		this.eventEmitter.emit("cameraUpdated", {
+			panX: this.panX,
+			panY: this.panY,
+			zoomLevel: this.zoomLevel,
+		});
+	}
 
-    /*
-        * Start panning in a specific direction
-        * @param {string} direction - The direction to pan ('left', 'right', 'up', 'down')
-        * This function starts an interval that pans the map in the specified direction.
-        * If the interval is already running, it will not start a new one.
-        *
-        * // TODO - implement use of requestAnimationFrame instead of setInterval
-        */
-     startPanning(direction:Direction) {
-        // Don't trigger if already panning in that direction
-        if (this.activePanningDirections.includes(direction)) return;
-        const panSpeed = 10; // Adjust the panning speed as needed
-        this.activePanningDirections.push(direction);
+	/*
+	 * Start panning in a specific direction
+	 * @param {string} direction - The direction to pan ('left', 'right', 'up', 'down')
+	 * This function starts an interval that pans the map in the specified direction.
+	 * If the interval is already running, it will not start a new one.
+	 *
+	 * // TODO - implement use of requestAnimationFrame instead of setInterval
+	 */
+	startPanning(direction: Direction) {
+		// Don't trigger if already panning in that direction
+		if (this.activePanningDirections.includes(direction)) return;
+		const panSpeed = 10; // Adjust the panning speed as needed
+		this.activePanningDirections.push(direction);
 
-        if (!this.panningInterval) {
-            this.panningInterval = setInterval(() => {
-                for (const dir of this.activePanningDirections) {
-                    if (dir === 'left') {
-                        this.panX += panSpeed;
-                    } else if (dir === 'right') {
-                        this.panX -= panSpeed;
-                    } else if (dir === 'up') {
-                        // We move 1/2 the speed in the y direction because 
-                        // then when we do diagonal scrolling, it matches the 
-                        // isometric tile ratio better.
-                        this.panY += panSpeed / 2;
-                    } else if (dir === 'down') {
-                        this.panY -= panSpeed / 2;
-                    }
-                }
-                this.eventEmitter.emit('cameraUpdated', { panX: this.panX, panY: this.panY, zoomLevel: this.zoomLevel });
-                /*
+		if (!this.panningInterval) {
+			this.panningInterval = setInterval(() => {
+				for (const dir of this.activePanningDirections) {
+					if (dir === "left") {
+						this.panX += panSpeed;
+					} else if (dir === "right") {
+						this.panX -= panSpeed;
+					} else if (dir === "up") {
+						// We move 1/2 the speed in the y direction because
+						// then when we do diagonal scrolling, it matches the
+						// isometric tile ratio better.
+						this.panY += panSpeed / 2;
+					} else if (dir === "down") {
+						this.panY -= panSpeed / 2;
+					}
+				}
+				this.eventEmitter.emit("cameraUpdated", {
+					panX: this.panX,
+					panY: this.panY,
+					zoomLevel: this.zoomLevel,
+				});
+				/*
                      NOTE - we assume the hooks complete before the next call 
                      in the loop is executed - nothing here prevents it from 
                      running on beyond the next frame call.
                 */
-            }, (1000 / 60));
-        }
-    }
+			}, 1000 / 60);
+		}
+	}
 
-    /* Stop panning in a specific direction
-        * @param {string} direction - The direction to stop panning ('left', 'right', 'up', 'down')
-        * This function stops the panning interval for the specified direction.
-    */
-    stopPanning(direction:Direction) {
-        const index = this.activePanningDirections.indexOf(direction);
-        if (index !== -1) {
-            this.activePanningDirections.splice(index, 1);
-        }
-        if (this.activePanningDirections.length === 0) {
-            if (this.panningInterval) clearInterval(this.panningInterval);
-            this.panningInterval = null;
-        }
-    }
+	/* Stop panning in a specific direction
+	 * @param {string} direction - The direction to stop panning ('left', 'right', 'up', 'down')
+	 * This function stops the panning interval for the specified direction.
+	 */
+	stopPanning(direction: Direction) {
+		const index = this.activePanningDirections.indexOf(direction);
+		if (index !== -1) {
+			this.activePanningDirections.splice(index, 1);
+		}
+		if (this.activePanningDirections.length === 0) {
+			if (this.panningInterval) clearInterval(this.panningInterval);
+			this.panningInterval = null;
+		}
+	}
 }
 
 export default Camera;
