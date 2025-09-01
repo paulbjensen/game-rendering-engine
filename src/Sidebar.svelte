@@ -16,7 +16,7 @@
     #sidebar {
         font-family: Arial, Helvetica, sans-serif;
         position: absolute;
-        top: 80px;
+        top: 20px;
         left: 20px;
         width: 230px;
         height: calc(100dvh - 140px);

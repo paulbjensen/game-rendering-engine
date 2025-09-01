@@ -13,7 +13,7 @@
 	import ImageAssetSet from './assets/ImageAssetSet';
     import Sidebar from './Sidebar.svelte';
     import TopBar from './TopBar.svelte';
-	import WelcomeScreen from './WelcomeScreen.svelte';
+	import WelcomeScreen from './modals/welcome/WelcomeScreen.svelte';
     import GameManager from './lib/GameManager/GameManager';
 
     let enableFPSCounter = $state(false);
@@ -153,8 +153,9 @@
                 alert('Game saved!');
             }
         });
-        eventEmitter.on('loadGame', () => {
-            const game = gameManager.load('currentGame');
+        eventEmitter.on('loadGame', (name?:string) => {
+            if (!name) name = 'currentGame';
+            const game = gameManager.load(name);
             if (game && gameMap) {
                 gameMap.updateMap(game.data);
                 gameMap.draw();
@@ -217,6 +218,6 @@
     {/if}
     <TopBar {appMode} {eventEmitter} />
     {#if !hideWelcomeScreen}
-        <WelcomeScreen onClick={() => hideWelcomeScreen = true} />
+        <WelcomeScreen {gameManager} {eventEmitter} hide={() => hideWelcomeScreen = true} />
     {/if}
 </main>
