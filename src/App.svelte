@@ -16,6 +16,7 @@
 	import WelcomeScreen from './WelcomeScreen.svelte';
     import GameManager from './lib/GameManager/GameManager';
 
+    let enableFPSCounter = $state(false);
     const fpsResult = fps();
 
     const camera = new Camera({ eventEmitter, maxZoomLevel: 4, minZoomLevel: 0.5 });
@@ -52,7 +53,8 @@
             '=': () => eventEmitter.emit('zoomIn'),
             '-': () => eventEmitter.emit('zoomOut'),
             '0': () => eventEmitter.emit('resetZoom'),
-            'c': () => eventEmitter.emit('recenter')
+            'c': () => eventEmitter.emit('recenter'),
+            'd': () => eventEmitter.emit('toggleFPSCounter')
         },
         keyup: {
             'ArrowUp': () => eventEmitter.emit('stopPanning', 'up'),
@@ -152,18 +154,15 @@
             }
         });
         eventEmitter.on('loadGame', () => {
-            console.log("Loading game");
             const game = gameManager.load('currentGame');
-            console.log("Loaded game:", game);
             if (game && gameMap) {
-                console.log(game.data[0][0]);
-                console.log(gameMap.map[0][0]);
-                console.log("Applying map data and redraw");
                 gameMap.updateMap(game.data);
-                console.log("Map data and redraw applied");
-                console.log(gameMap.map[0][0]);
                 gameMap.draw();
             }
+        });
+
+        eventEmitter.on('toggleFPSCounter', () => {
+            enableFPSCounter = !enableFPSCounter;
         });
 
         // Load map assets then resize the canvas once loaded
@@ -204,28 +203,15 @@
         height:100dvh;
     }
 
-    #logo {
-        position: absolute;
-        top: 20px;
-        left: 20px;
-    }
-
-    @media (max-width: 600px) {
-        #logo {
-            display: none;
-        }
-    }
 </style>
 
 <main>
-    <div id="fps-count">{$fpsResult} fps</div>
+    {#if enableFPSCounter}
+        <div id="fps-count">{$fpsResult} fps</div>
+    {/if}
     <canvas id="map">
         Your browser does not support the canvas element.
     </canvas>
-    <div id="logo">
-        <img src="/img/logo.svg" width="200" alt="Babsland logo">
-    </div>
-
     {#if imageAssetSet}
         <Sidebar {imageAssetSet} {eventEmitter} {selectedImageAsset} hidden={appMode !== "edit"} />
     {/if}
