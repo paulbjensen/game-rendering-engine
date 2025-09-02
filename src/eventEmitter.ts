@@ -16,6 +16,7 @@ type MyEvents = EventMap & {
 	setAppMode: (mode: AppMode) => void;
 	loadGame: () => void;
 	saveGame: (name: string) => void;
+	deleteGame: (name: string) => void;
 };
 
 // Create an instance of the event emitter class with type safety

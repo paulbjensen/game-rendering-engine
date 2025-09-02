@@ -45,6 +45,19 @@
     .saved-game:hover {
         background: rgba(255, 255, 255, 0.1);
     }
+
+
+    .map-item {
+        display: grid;
+        grid-template-columns: 1fr 20px;
+        gap: 8px;
+    }
+
+    button.delete-game, button.delete-game:hover {
+        border: none;
+        padding: none;
+    }
+
 </style>
 
 <h2>Load Map</h2>
@@ -54,7 +67,10 @@
     <p>Select a map to load:</p>
     <div id="map-list">
         {#each gameManager.games as game}
-            <button class="saved-game" onclick={() => loadGame(game.name)}>{game.name}</button>
+            <div class="map-item">
+                <button class="saved-game" onclick={() => loadGame(game.name)}>{game.name}</button>
+                <button class="delete-game" onclick={() => { eventEmitter.emit('deleteGame', game.name); back(); }}>❌</button>
+            </div>
         {/each}
     </div>
 {/if}

@@ -174,6 +174,13 @@
             }
         });
 
+        eventEmitter.on('deleteGame', (name:string) => {
+            if (confirm("Are you sure you want to delete this game?")) {
+                gameManager.delete(name);
+                alert('Game deleted!');
+            }
+        });
+
         eventEmitter.on('toggleFPSCounter', () => {
             enableFPSCounter = !enableFPSCounter;
         });
@@ -185,6 +192,7 @@
         eventEmitter.on('showSaveModal', () => {
             showSaveModal = true;
         });
+
 
         // Load map assets then resize the canvas once loaded
         await gameMap?.load();

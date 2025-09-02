@@ -92,18 +92,36 @@
         font-size: 16px;
     }
 
+    .map-item {
+        display: grid;
+        grid-template-columns: 1fr 20px;
+        gap: 8px;
+    }
+
+    button.delete-game, button.delete-game:hover {
+        border: none;
+        padding: none;
+    }
+
 </style>
 
 <div id="overlay">
     <div class="modal" id="load-modal">
         <h2>Save</h2>
-        <p>Click below to save as that map name</p>
+        {#if gameManager.games.length > 0}
+            <p>Click below to save as that map name</p>
+        {/if}
         <div id="map-list">
             {#each gameManager.games as game}
-                <button class="saved-game" onclick={() => {gameName = game.name; saveGame(); }}>{game.name}</button>
+                <div class="map-item">
+                    <button class="saved-game" onclick={() => {gameName = game.name; saveGame(); }}>{game.name}</button>
+                    <button class="delete-game" onclick={() => { eventEmitter.emit('deleteGame', game.name); hide(); }}>❌</button>
+                </div>
             {/each}
         </div>
-        <p>Or give it a new name</p>
+        {#if gameManager.games.length > 0}
+            <p>Or give it a new name</p>
+        {/if}
         <form onsubmit={saveGame} method="post">
             <input
                 type="text"
