@@ -15,7 +15,7 @@ type MyEvents = EventMap & {
 	click: (tile: [number, number] | null) => void;
 	setAppMode: (mode: AppMode) => void;
 	loadGame: () => void;
-	saveGame: () => void;
+	saveGame: (name: string) => void;
 };
 
 // Create an instance of the event emitter class with type safety

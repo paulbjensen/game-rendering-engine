@@ -16,6 +16,7 @@
 	import WelcomeScreen from './modals/welcome/WelcomeScreen.svelte';
     import GameManager from './lib/GameManager/GameManager';
     import LoadModal from './modals/load/LoadModal.svelte';
+    import SaveModal from './modals/save/SaveModal.svelte';
 
     let enableFPSCounter = $state(false);
     const fpsResult = fps();
@@ -33,8 +34,13 @@
 
     let appMode: AppMode = $state('navigation');
 
+    let gameName: string = $state('currentGame');
+
     // Toggles showing/hiding the load modal
     let showLoadModal = $state(false);
+    
+    // Toggles showing/hiding the save modal
+    let showSaveModal = $state(false);
 
     const setAppmode = (mode: AppMode) => {
         if (mode === "navigation") {
@@ -151,14 +157,16 @@
             }
         });
         eventEmitter.on('setAppMode', setAppmode);
-        eventEmitter.on('saveGame', () => {
+        eventEmitter.on('saveGame', (name:string) => {
             if (gameMap) {
-                gameManager.save('currentGame', gameMap.map);
+                gameName = name;
+                gameManager.save(name, gameMap.map);
                 alert('Game saved!');
             }
         });
         eventEmitter.on('loadGame', (name?:string) => {
             if (!name) name = 'currentGame';
+            gameName = name;
             const game = gameManager.load(name);
             if (game && gameMap) {
                 gameMap.updateMap(game.data);
@@ -172,6 +180,10 @@
 
         eventEmitter.on('showLoadModal', () => {
             showLoadModal = true;
+        });
+
+        eventEmitter.on('showSaveModal', () => {
+            showSaveModal = true;
         });
 
         // Load map assets then resize the canvas once loaded
@@ -230,5 +242,8 @@
     {/if}
     {#if showLoadModal}
         <LoadModal {gameManager} {eventEmitter} hide={() => showLoadModal = false} />
+    {/if}
+    {#if showSaveModal}
+        <SaveModal {gameManager} {eventEmitter} {gameName} hide={() => showSaveModal = false} />
     {/if}
 </main>

@@ -1,9 +1,9 @@
 <script lang="ts">
-    const { hide, gameManager, eventEmitter } = $props();
+    let { hide, gameManager, eventEmitter, gameName } = $props();
 
-    // TODO - maybe one day, refactor this so that it uses the same code as for the welcome screen
-    function loadGame(name:string) {
-        eventEmitter.emit('loadGame', name);
+    function saveGame(event?: Event) {
+        event?.preventDefault();
+        eventEmitter.emit('saveGame', gameName);
         hide();
     }
 </script>
@@ -24,13 +24,15 @@
 
     .modal {
         text-align: center;
-        padding: 40px;
+        padding: 20px 40px;
         border: solid 1px rgba(255, 255, 255, 0.3);
         background: rgba(0,0,0,0.03);
         backdrop-filter: blur(10px);
         border-radius: 10px;
         color: white;
         font-family: Arial, Helvetica, sans-serif;
+        display: flex;
+        flex-direction: column;
     }
 
     #map-list {
@@ -70,21 +72,47 @@
     .saved-game:hover {
         background: rgba(255, 255, 255, 0.1);
     }
+
+    form {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 12px;
+        border: solid 1px rgba(255, 255, 255, 0.3);
+        border-radius: 8px;
+        margin-bottom: 12px;
+    }
+
+    input[type="text"] {
+        padding: 8px 12px;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 4px;
+        background: white;
+        color: black;
+        font-size: 16px;
+    }
+
 </style>
 
 <div id="overlay">
     <div class="modal" id="load-modal">
-        <h2>Load Map</h2>
-        {#if gameManager.games.length === 0}
-            <p>No maps available</p>
-        {:else}
-            <p>Select a map to load:</p>
-            <div id="map-list">
-                {#each gameManager.games as game}
-                    <button class="saved-game" onclick={() => loadGame(game.name)}>{game.name}</button>
-                {/each}
-            </div>
-        {/if}
+        <h2>Save</h2>
+        <p>Click below to save as that map name</p>
+        <div id="map-list">
+            {#each gameManager.games as game}
+                <button class="saved-game" onclick={() => {gameName = game.name; saveGame(); }}>{game.name}</button>
+            {/each}
+        </div>
+        <p>Or give it a new name</p>
+        <form onsubmit={saveGame} method="post">
+            <input
+                type="text"
+                placeholder="Save as"
+                bind:value={gameName}
+                required
+            />
+            <button type="submit">Save</button>
+        </form>
         <button onclick={hide}>Cancel</button>
     </div>
 </div>
