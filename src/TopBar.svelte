@@ -149,6 +149,6 @@
     </div>
     <div id="load-save-bar">
         <button onclick={() => eventEmitter.emit('saveGame')}>Save</button>
-        <button onclick={() => eventEmitter.emit('loadGame')}>Load</button>
+        <button onclick={() => eventEmitter.emit('showLoadModal')}>Load</button>
     </div>
 {/if}

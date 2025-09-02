@@ -15,6 +15,7 @@
     import TopBar from './TopBar.svelte';
 	import WelcomeScreen from './modals/welcome/WelcomeScreen.svelte';
     import GameManager from './lib/GameManager/GameManager';
+    import LoadModal from './modals/load/LoadModal.svelte';
 
     let enableFPSCounter = $state(false);
     const fpsResult = fps();
@@ -31,6 +32,9 @@
     let selectedImageAsset: ImageAsset | null = $state(null);
 
     let appMode: AppMode = $state('navigation');
+
+    // Toggles showing/hiding the load modal
+    let showLoadModal = $state(false);
 
     const setAppmode = (mode: AppMode) => {
         if (mode === "navigation") {
@@ -166,6 +170,10 @@
             enableFPSCounter = !enableFPSCounter;
         });
 
+        eventEmitter.on('showLoadModal', () => {
+            showLoadModal = true;
+        });
+
         // Load map assets then resize the canvas once loaded
         await gameMap?.load();
         resizeCanvas();
@@ -219,5 +227,8 @@
     <TopBar {appMode} {eventEmitter} />
     {#if !hideWelcomeScreen}
         <WelcomeScreen {gameManager} {eventEmitter} hide={() => hideWelcomeScreen = true} />
+    {/if}
+    {#if showLoadModal}
+        <LoadModal {gameManager} {eventEmitter} hide={() => showLoadModal = false} />
     {/if}
 </main>
