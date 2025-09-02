@@ -208,7 +208,7 @@ class GameMap {
 				}
 			}
 		}
-
+		// This is the cursor drawing logic that we will isolate and put into another class
 		if (this.selectedTile) {
 			this.drawCursorAt(...this.selectedTile);
 		}

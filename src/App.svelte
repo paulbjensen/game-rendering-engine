@@ -95,22 +95,27 @@
             This is fun but will it handle everything that is needed, 
             especially characters and clicking on objects?
         */
-        const canvas = document.getElementById('map') as HTMLCanvasElement;
-        gameMap = new GameMap({ target: canvas, camera, map, imageAssetSet });
-
-        touch.attach(canvas);
-        mouse.attach(canvas);
-        cursor.attach({ target: canvas, camera, gameMap: gameMap });
-
-        if (!canvas) {
-            console.error('Canvas element not found');
-            throw new Error('Canvas element not found');
+        const mapCanvas = document.getElementById('map') as HTMLCanvasElement;
+        const cursorCanvas = document.getElementById('cursor') as HTMLCanvasElement;
+        if (!mapCanvas || !cursorCanvas) {
+            console.error('Canvas element for map or cursor not found');
+            throw new Error('Canvas element for map or cursor not found');
         }
 
-        /* Resizes the canvas so that it alw ays fits within the window */
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
+        gameMap = new GameMap({ target: mapCanvas, camera, map, imageAssetSet });
+
+        // NOTE - check if touch needs to be attached to cursor canvas
+        touch.attach(cursorCanvas);
+        mouse.attach(cursorCanvas);
+        cursor.attach({ target: cursorCanvas, camera, gameMap: gameMap });
+
+        /* Resizes the canvas elements so that they always fit within the window */
+        function resizeCanvases() {
+            const canvasElements = [mapCanvas, cursorCanvas];
+            canvasElements.forEach(canvas => {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            });
             gameMap?.draw();
         }
 
@@ -133,7 +138,7 @@
         }
 
         // Call the resizeCanvas function initially and when the window is resized
-        window.addEventListener('resize', resizeCanvas);
+        window.addEventListener('resize', resizeCanvases);
 
         // EventEmitter bindings
         eventEmitter.on('startPanning', camera.startPanning);
@@ -196,7 +201,7 @@
 
         // Load map assets then resize the canvas once loaded
         await gameMap?.load();
-        resizeCanvas();
+        resizeCanvases();
 
     });
 
@@ -212,6 +217,7 @@
 <style>
     #fps-count {
         position: absolute;
+        z-index: 3;
         top: 20px;
         right: 20px;
         border: solid 1px rgba(255,255,255,0.2);
@@ -226,7 +232,10 @@
         font-weight: bold;
     }
 
-    #map {
+    #map, #cursor {
+        position:absolute;
+        top: 0px;
+        left: 0px;
         cursor: move;
         width:100vw;
         height:100dvh;
@@ -238,9 +247,12 @@
     {#if enableFPSCounter}
         <div id="fps-count">{$fpsResult} fps</div>
     {/if}
-    <canvas id="map">
-        Your browser does not support the canvas element.
-    </canvas>
+    <div id="game">
+        <canvas id="map">
+            Your browser does not support the canvas element.
+        </canvas>
+        <canvas id="cursor"></canvas>
+    </div>
     {#if imageAssetSet}
         <Sidebar {imageAssetSet} {eventEmitter} {selectedImageAsset} hidden={appMode !== "edit"} />
     {/if}

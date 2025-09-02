@@ -39,7 +39,6 @@ class Mouse {
 		this.onMouseUp = this.onMouseUp.bind(this);
 		this.onMouseLeave = this.onMouseLeave.bind(this);
 		this.adjustCameraPan = this.adjustCameraPan.bind(this);
-		// this.drawCursor = this.drawCursor.bind(this);
 	}
 
 	attach(target: HTMLElement) {
@@ -102,7 +101,6 @@ class Mouse {
 		if (this.dragDistance > this.dragThreshold) {
 			this.suppressClick = true;
 		}
-		// drawMap was called here - but in theory the eventEmitter pan event will trigger that
 	}
 
 	onMouseMove(event: MouseEvent) {
