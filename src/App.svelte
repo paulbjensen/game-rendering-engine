@@ -102,7 +102,7 @@
             throw new Error('Canvas element for map or cursor not found');
         }
 
-        gameMap = new GameMap({ target: mapCanvas, camera, map, imageAssetSet });
+        gameMap = new GameMap({ target: mapCanvas, cursorTarget: cursorCanvas, camera, map, imageAssetSet });
 
         // NOTE - check if touch needs to be attached to cursor canvas
         touch.attach(cursorCanvas);
@@ -149,7 +149,15 @@
         eventEmitter.on('zoomIn', camera.zoomIn);
         eventEmitter.on('resetZoom', camera.resetZoom);
         eventEmitter.on('recenter', camera.resetPan);
-        eventEmitter.on('cameraUpdated', gameMap.draw);
+        eventEmitter.on('cameraUpdated', () => {
+            if (!gameMap) return;
+            gameMap.draw();
+            if (
+                gameMap.selectedTile    
+            ) {
+                gameMap.drawCursorAt(...gameMap.selectedTile)
+            }
+        });
         eventEmitter.on('selectImageAsset', selectImageAsset);
         eventEmitter.on('click', (tile: [number, number] | null) => {
             if (tile && selectedImageAsset && gameMap) {

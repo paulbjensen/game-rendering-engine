@@ -5,6 +5,7 @@ import { delayUntil, imageHasLoaded } from "./utils";
 
 class GameMap {
 	target: HTMLCanvasElement;
+	cursorTarget: HTMLCanvasElement;
 	camera: Camera;
 	map: MapData;
 	rows: number;
@@ -13,16 +14,19 @@ class GameMap {
 	imageAssetSet: ImageAssetSet;
 	constructor({
 		target,
+		cursorTarget,
 		camera,
 		map,
 		imageAssetSet,
 	}: {
 		target: HTMLCanvasElement;
+		cursorTarget: HTMLCanvasElement;
 		camera: Camera;
 		map: MapData;
 		imageAssetSet: ImageAssetSet;
 	}) {
 		this.target = target;
+		this.cursorTarget = cursorTarget;
 		this.camera = camera;
 		this.map = map;
 		this.imageAssetSet = imageAssetSet;
@@ -95,7 +99,8 @@ class GameMap {
 	}
 
 	drawCursorAt(row: number, column: number) {
-		const ctx = this.target.getContext("2d");
+		// I'm going to do a cheeky tweak here
+		const ctx = this.cursorTarget.getContext("2d");
 		if (!ctx) {
 			console.error("Failed to get canvas context");
 			return;
@@ -106,7 +111,7 @@ class GameMap {
 		// NOTE - copied from draw - can be dried up
 
 		// Draw a diamond around the selected tile
-
+		ctx.clearRect(0, 0, this.cursorTarget.width, this.cursorTarget.height);
 		ctx.save();
 		ctx.strokeStyle = "white";
 		ctx.lineWidth = 2 * this.camera.zoomLevel;
@@ -209,9 +214,9 @@ class GameMap {
 			}
 		}
 		// This is the cursor drawing logic that we will isolate and put into another class
-		if (this.selectedTile) {
-			this.drawCursorAt(...this.selectedTile);
-		}
+		// if (this.selectedTile) {
+		// 	this.drawCursorAt(...this.selectedTile);
+		// }
 	}
 }
 

@@ -271,7 +271,8 @@ class Cursor {
 		const currentSelectedTile = this.gameMap?.selectedTile;
 		this.calculatePositionOnMap();
 		if (this.hasChanged(currentSelectedTile, this.gameMap?.selectedTile)) {
-			this.gameMap?.draw();
+			if (this.gameMap?.selectedTile)
+				this.gameMap?.drawCursorAt(...this.gameMap.selectedTile);
 		}
 	}
 
