@@ -111,6 +111,11 @@ class Camera {
         Resets the camera's zoom level to the default value.
     */
 	resetZoom() {
+		const level = 1;
+		const zoomFactor = level / this.zoomLevel;
+		this.panX *= zoomFactor;
+		this.panY *= zoomFactor;
+
 		this.zoomLevel = 1;
 		this.eventEmitter.emit("cameraUpdated", {
 			panX: this.panX,

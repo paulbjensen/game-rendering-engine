@@ -137,6 +137,14 @@
             selectedImageAsset = imageAsset;
         }
 
+        /* 
+            Adjusts the zoom based on the zoomFactor number and zoom level
+            Used by the touch controls.
+        */
+        function adjustZoom (zoomFactor:number) {
+            camera.setZoom(camera.zoomLevel * zoomFactor);
+        }
+
         // Call the resizeCanvas function initially and when the window is resized
         window.addEventListener('resize', resizeCanvases);
 
@@ -144,7 +152,7 @@
         eventEmitter.on('startPanning', camera.startPanning);
         eventEmitter.on('stopPanning', camera.stopPanning);
         eventEmitter.on('pan', camera.addPan);
-        eventEmitter.on('adjustZoom', (zoomFactor:number) => camera.setZoom(camera.zoomLevel * zoomFactor));
+        eventEmitter.on('adjustZoom', adjustZoom);
         eventEmitter.on('zoomOut', camera.zoomOut);
         eventEmitter.on('zoomIn', camera.zoomIn);
         eventEmitter.on('resetZoom', camera.resetZoom);
