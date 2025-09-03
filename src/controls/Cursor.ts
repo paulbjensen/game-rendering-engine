@@ -239,8 +239,6 @@ class Cursor {
 		// Apply the updates to the map - then redraw
 		// Ideally, I want to batch the updates and apply them all at once
 		// That way, I don't have to redraw the entire map for each individual tile
-
-		this.gameMap?.draw();
 	}
 
 	private onMouseLeave() {
