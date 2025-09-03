@@ -169,6 +169,27 @@
                 gameMap.draw();
             }
         });
+        eventEmitter.on('clickBatch', (tiles: [number, number][]) => {
+            if (tiles.length === 0) return;
+            if (selectedImageAsset && gameMap) {
+                for (const tile of tiles) {
+                    gameMap.map[tile[0]][tile[1]] = [0, selectedImageAsset.code];
+                }
+                gameMap.draw();
+            }
+        });
+
+        eventEmitter.on('drawPreview', (tiles: [number, number][]) => {
+            if (tiles.length === 0) return;
+            if (selectedImageAsset && gameMap) {
+                gameMap.drawPreview(tiles);
+            }
+        });
+
+        eventEmitter.on('clearPreview', () => {
+            if (gameMap) { gameMap.clearPreview(); }
+        });
+
         eventEmitter.on('setAppMode', setAppmode);
         eventEmitter.on('saveGame', (name:string) => {
             if (gameMap) {
@@ -205,6 +226,8 @@
         eventEmitter.on('showSaveModal', () => {
             showSaveModal = true;
         });
+
+
 
 
         // Load map assets then resize the canvas once loaded

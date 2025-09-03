@@ -139,14 +139,12 @@ class Cursor {
 		return out;
 	}
 
+	// I think that this is the function that causes the huge spike in jankiness
 	private setStrokePreview(tiles: Tile[]) {
-		tiles.forEach((tile) => {
-			this.eventEmitter.emit("click", tile);
-		});
+		this.eventEmitter.emit("drawPreview", tiles);
 		this.strokeTiles = tiles.slice();
 		this.strokeSeen.clear();
 		for (const t of this.strokeTiles) this.strokeSeen.add(this.tileKey(t));
-		this.eventEmitter.emit("tiles:paint:preview", this.strokeTiles);
 	}
 
 	private startStrokeAt(tile: Tile) {
@@ -158,9 +156,6 @@ class Cursor {
 		this.strokeTiles = [tile];
 		this.strokeSeen.clear();
 		this.strokeSeen.add(this.tileKey(tile));
-
-		this.eventEmitter.emit("tiles:paint:start", tile);
-		this.eventEmitter.emit("tiles:paint:preview", this.strokeTiles);
 	}
 
 	private extendStrokeTo(tile: Tile, constraint: PaintConstraint) {
@@ -203,13 +198,12 @@ class Cursor {
 	private endStroke() {
 		if (!this.isPainting) return;
 		this.isPainting = false;
-		this.eventEmitter.emit("tiles:paint:end", this.strokeTiles.slice());
-		this.eventEmitter.emit("tiles:apply", this.strokeTiles.slice());
 
 		// reset
 		this.strokeStart = null;
 		this.axisLock = null;
 		this.axisLockArmed = false;
+		this.eventEmitter.emit("clearPreview");
 	}
 
 	// ---------- Mouse events ----------
@@ -240,6 +234,12 @@ class Cursor {
 		event.stopPropagation();
 
 		this.endStroke();
+		this.eventEmitter.emit("clickBatch", this.strokeTiles);
+		// What I want to do here instead is:
+		// Apply the updates to the map - then redraw
+		// Ideally, I want to batch the updates and apply them all at once
+		// That way, I don't have to redraw the entire map for each individual tile
+
 		this.gameMap?.draw();
 	}
 
@@ -285,7 +285,7 @@ class Cursor {
 		const currentSelectedTile = this.gameMap?.selectedTile;
 		this.calculatePositionOnMap();
 		for (const tile of this.strokeTiles) {
-			this.eventEmitter.emit("click", tile);
+			//this.eventEmitter.emit("click", tile);
 		}
 		if (this.hasChanged(currentSelectedTile, this.gameMap?.selectedTile)) {
 			this.gameMap?.draw();

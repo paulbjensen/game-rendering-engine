@@ -140,6 +140,60 @@ class GameMap {
 		ctx.restore();
 	}
 
+	drawPreview(tiles: [number, number][]) {
+		// I'm going to do a cheeky tweak here
+		const ctx = this.cursorTarget.getContext("2d");
+		if (!ctx) {
+			console.error("Failed to get canvas context");
+			return;
+		}
+
+		const { mapX, mapY } = this.getMapCoords();
+
+		// NOTE - copied from draw - can be dried up
+
+		// Draw a diamond around the selected tile
+		ctx.clearRect(0, 0, this.cursorTarget.width, this.cursorTarget.height);
+		ctx.save();
+		// Calculate the top-left corner of the tile in screen coordinates
+		for (const [row, column] of tiles) {
+			const tile = this.imageAssetSet.imageAssets.find(
+				(t) => t.code === this.map[row][column],
+			);
+			const tileWidth =
+				this.imageAssetSet.baseTileWidth * this.camera.zoomLevel;
+			const tileHeight =
+				this.imageAssetSet.baseTileHeight * this.camera.zoomLevel;
+			const x = ((column - row) * tileWidth) / 2 + mapX;
+			const y =
+				((column + row) * tileHeight) / 2 +
+				mapY -
+				((tile?.height ? tile.height : this.imageAssetSet.baseTileHeight) -
+					this.imageAssetSet.baseTileHeight) *
+					this.camera.zoomLevel;
+
+			ctx.strokeStyle = "white";
+			ctx.lineWidth = 2 * this.camera.zoomLevel;
+			ctx.beginPath();
+			ctx.moveTo(x + tileWidth / 2, y);
+			ctx.lineTo(x + tileWidth, y + tileHeight / 2);
+			ctx.lineTo(x + tileWidth / 2, y + tileHeight);
+			ctx.lineTo(x, y + tileHeight / 2);
+			ctx.closePath();
+			ctx.stroke();
+			ctx.restore();
+		}
+	}
+
+	clearPreview() {
+		const ctx = this.cursorTarget.getContext("2d");
+		if (!ctx) {
+			console.error("Failed to get canvas context");
+			return;
+		}
+		ctx.clearRect(0, 0, this.cursorTarget.width, this.cursorTarget.height);
+	}
+
 	draw() {
 		const ctx = this.target.getContext("2d");
 		if (!ctx) {
