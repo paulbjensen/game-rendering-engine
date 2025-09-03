@@ -229,7 +229,6 @@ class Cursor {
 		const tile = this.pixelToTile(this.x, this.y);
 		if (tile) {
 			this.startStrokeAt(tile);
-			this.gameMap?.draw();
 		}
 	}
 
@@ -262,7 +261,6 @@ class Cursor {
 				const active: PaintConstraint = this.paintConstraint;
 
 				this.extendStrokeTo(tile, active);
-				this.gameMap?.draw();
 			}
 			return;
 		}
