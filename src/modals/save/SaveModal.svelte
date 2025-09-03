@@ -128,6 +128,9 @@
                 placeholder="Save as"
                 bind:value={gameName}
                 required
+                pattern="[a-zA-Z]+"
+                minlength="3"
+                maxlength="20"
             />
             <button type="submit">Save</button>
         </form>
