@@ -296,6 +296,7 @@ class Cursor {
 	private pixelToTile(px: number, py: number): Tile | null {
 		if (!this.camera || !this.gameMap || !this.target) return null;
 
+		// --- camera / canvas / world sizes ---
 		const zoom = this.camera.zoomLevel;
 		const panX = this.camera.panX; // screen px
 		const panY = this.camera.panY;
@@ -308,6 +309,9 @@ class Cursor {
 		const W = this.gameMap.imageAssetSet.baseTileWidth;
 		const H = this.gameMap.imageAssetSet.baseTileHeight;
 		const R = this.gameMap.rows;
+		const C = this.gameMap.columns;
+
+		// If you centered wide sprites in drawBackground(), keep these consistent.
 		const Wmax = Math.max(
 			...this.gameMap.imageAssetSet.imageAssets.map((a) => a.width ?? W),
 		);
@@ -315,53 +319,77 @@ class Cursor {
 			...this.gameMap.imageAssetSet.imageAssets.map((a) => a.height ?? H),
 		);
 
-		// Same origin as background draw
+		// World origin used when drawing the background
 		const mapX = ((R - 1) * W) / 2 + (Wmax - W) / 2;
 		const mapY = Hmax - H;
 
-		// Use the SAME transform as sampleBackground, but don't snap here
+		// Same pan/zoom as sampleBackground() (do NOT round here for picking)
 		const e = tgtW / 2 + panX - (bgW * zoom) / 2;
 		const f = tgtH / 2 + panY - (bgH * zoom) / 2;
 
-		// screen -> world
+		// --- screen -> world ---
 		const wx = (px - e) / zoom;
 		const wy = (py - f) / zoom;
 
-		// world -> lattice-local
+		// --- world -> lattice-local (base W×H grid) ---
 		const lx = wx - mapX;
 		const ly = wy - mapY;
 
 		const hw = W / 2;
 		const hh = H / 2;
 
+		// Continuous diamond coords
 		const u = (lx / hw + ly / hh) / 2; // ~ col
 		const v = (ly / hh - lx / hw) / 2; // ~ row
 
-		let col = Math.floor(u);
-		let row = Math.floor(v);
+		// Initial nearest-center guess (removes strong bias)
+		const EPS = 1e-6;
+		let col0 = Math.floor(u + 0.5 - EPS);
+		let row0 = Math.floor(v + 0.5 - EPS);
 
-		const fu = u - (col + 0.5);
-		const fv = v - (row + 0.5);
+		// Candidate neighborhood to de-bias tiny mismatches
+		const candidates: Tile[] = [
+			[row0, col0],
+			[row0, col0 + 1],
+			[row0 + 1, col0],
+			[row0 - 1, col0],
+			[row0, col0 - 1],
+			[row0 + 1, col0 + 1],
+			[row0 - 1, col0 - 1],
+		];
 
-		if (Math.abs(fu) + Math.abs(fv) > 0.5) {
-			if (fu > 0 && fv > 0) {
-				col += 1;
-				row += 1;
-			} else if (fu > 0 && fv <= 0) {
-				col += 1;
-			} else if (fu <= 0 && fv > 0) {
-				row += 1;
+		// Diamond center distance in SCREEN space (L1 / Manhattan in diamond metric)
+		const diamondHalfW = (W * zoom) / 2;
+		const diamondHalfH = (H * zoom) / 2;
+
+		let best: Tile | null = null;
+		let bestScore = Number.POSITIVE_INFINITY;
+
+		for (const [r, c] of candidates) {
+			if (r < 0 || c < 0 || r >= R || c >= C) continue;
+
+			// World top-left of this tile's base footprint (same as drawBackground grid)
+			const topLeftX = ((c - r) * W) / 2 + mapX + (W - W) / 2; // (W-W)/2 = 0; kept for clarity
+			const topLeftY = ((c + r) * H) / 2 + mapY - (H - H); // (H-H)   = 0
+
+			// Diamond center in WORLD then SCREEN
+			const centerWx = topLeftX + W / 2;
+			const centerWy = topLeftY + H / 2;
+			const centerSx = centerWx * zoom + e;
+			const centerSy = centerWy * zoom + f;
+
+			// L1 in diamond space (normalize by half extents so X/Y weigh evenly)
+			const score =
+				Math.abs(px - centerSx) / diamondHalfW +
+				Math.abs(py - centerSy) / diamondHalfH;
+
+			if (score < bestScore) {
+				bestScore = score;
+				best = [r, c];
 			}
 		}
 
-		if (
-			row < 0 ||
-			col < 0 ||
-			row >= this.gameMap.rows ||
-			col >= this.gameMap.columns
-		)
-			return null;
-		return [row, col];
+		return best;
 	}
 
 	calculatePositionOnMap() {
