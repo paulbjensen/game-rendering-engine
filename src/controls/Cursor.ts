@@ -263,6 +263,8 @@ class Cursor {
 			return;
 		}
 
+		console.log("Cursor position:", this.x, this.y);
+
 		// Normal hover highlight
 		const currentSelectedTile = this.gameMap?.selectedTile;
 		this.calculatePositionOnMap();

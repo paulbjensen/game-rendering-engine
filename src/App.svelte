@@ -160,6 +160,7 @@
         eventEmitter.on('cameraUpdated', () => {
             if (!gameMap) return;
             gameMap.draw();
+            cursor.calculatePositionOnMap();
             if (
                 gameMap.selectedTile    
             ) {
