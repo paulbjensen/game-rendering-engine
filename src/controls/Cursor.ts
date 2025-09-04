@@ -217,8 +217,13 @@ class Cursor {
 		event.stopPropagation();
 
 		const rect = this.target.getBoundingClientRect();
-		this.x = event.clientX - rect.left;
-		this.y = event.clientY - rect.top;
+		const scaleX = this.target.width / rect.width; // backing px per css px
+		const scaleY = this.target.height / rect.height; // (handles DPR & any CSS scale)
+		this.x = (event.clientX - rect.left) * scaleX;
+		this.y = (event.clientY - rect.top) * scaleY;
+
+		// this.x = event.clientX - rect.left;
+		// this.y = event.clientY - rect.top;
 
 		const tile = this.pixelToTile(this.x, this.y);
 		if (tile) {
@@ -235,10 +240,6 @@ class Cursor {
 
 		this.endStroke();
 		this.eventEmitter.emit("clickBatch", this.strokeTiles);
-		// What I want to do here instead is:
-		// Apply the updates to the map - then redraw
-		// Ideally, I want to batch the updates and apply them all at once
-		// That way, I don't have to redraw the entire map for each individual tile
 	}
 
 	private onMouseLeave() {
@@ -250,8 +251,10 @@ class Cursor {
 		if (!this.target) return;
 
 		const rect = this.target.getBoundingClientRect();
-		this.x = event.clientX - rect.left;
-		this.y = event.clientY - rect.top;
+		const scaleX = this.target.width / rect.width; // backing px per css px
+		const scaleY = this.target.height / rect.height; // (handles DPR & any CSS scale)
+		this.x = (event.clientX - rect.left) * scaleX;
+		this.y = (event.clientY - rect.top) * scaleY;
 
 		if (this.isPainting) {
 			const tile = this.pixelToTile(this.x, this.y);
@@ -262,9 +265,6 @@ class Cursor {
 			}
 			return;
 		}
-
-		console.log("Cursor position:", this.x, this.y);
-
 		// Normal hover highlight
 		const currentSelectedTile = this.gameMap?.selectedTile;
 		this.calculatePositionOnMap();
@@ -279,8 +279,10 @@ class Cursor {
 		if (this.isPainting) return;
 
 		const rect = this.target.getBoundingClientRect();
-		this.x = event.clientX - rect.left;
-		this.y = event.clientY - rect.top;
+		const scaleX = this.target.width / rect.width; // backing px per css px
+		const scaleY = this.target.height / rect.height; // (handles DPR & any CSS scale)
+		this.x = (event.clientX - rect.left) * scaleX;
+		this.y = (event.clientY - rect.top) * scaleY;
 
 		const currentSelectedTile = this.gameMap?.selectedTile;
 		this.calculatePositionOnMap();
@@ -294,29 +296,46 @@ class Cursor {
 	private pixelToTile(px: number, py: number): Tile | null {
 		if (!this.camera || !this.gameMap || !this.target) return null;
 
-		const { zoomLevel, panX, panY } = this.camera;
-		const rows = this.gameMap.rows;
-		const cols = this.gameMap.columns;
+		const zoom = this.camera.zoomLevel;
+		const panX = this.camera.panX; // screen px
+		const panY = this.camera.panY;
 
-		const TW = this.gameMap.imageAssetSet.baseTileWidth * zoomLevel;
-		const TH = this.gameMap.imageAssetSet.baseTileHeight * zoomLevel;
-		const HW = TW / 2;
-		const HH = TH / 2;
+		const bgW = this.gameMap.background.width;
+		const bgH = this.gameMap.background.height;
+		const tgtW = this.target.width;
+		const tgtH = this.target.height;
 
-		const MAP_H = (rows + cols) * HH;
+		const W = this.gameMap.imageAssetSet.baseTileWidth;
+		const H = this.gameMap.imageAssetSet.baseTileHeight;
+		const R = this.gameMap.rows;
+		const Wmax = Math.max(
+			...this.gameMap.imageAssetSet.imageAssets.map((a) => a.width ?? W),
+		);
+		const Hmax = Math.max(
+			...this.gameMap.imageAssetSet.imageAssets.map((a) => a.height ?? H),
+		);
 
-		// Map-space
-		const mx = px - panX;
-		const my = py - panY;
+		// Same origin as background draw
+		const mapX = ((R - 1) * W) / 2 + (Wmax - W) / 2;
+		const mapY = Hmax - H;
 
-		const ORIGIN_X = this.target.width / 2;
-		const ORIGIN_Y = (this.target.height - MAP_H) / 2;
+		// Use the SAME transform as sampleBackground, but don't snap here
+		const e = tgtW / 2 + panX - (bgW * zoom) / 2;
+		const f = tgtH / 2 + panY - (bgH * zoom) / 2;
 
-		const dx = mx - ORIGIN_X;
-		const dy = my - ORIGIN_Y;
+		// screen -> world
+		const wx = (px - e) / zoom;
+		const wy = (py - f) / zoom;
 
-		const u = (dx / HW + dy / HH) / 2;
-		const v = (dy / HH - dx / HW) / 2;
+		// world -> lattice-local
+		const lx = wx - mapX;
+		const ly = wy - mapY;
+
+		const hw = W / 2;
+		const hh = H / 2;
+
+		const u = (lx / hw + ly / hh) / 2; // ~ col
+		const v = (ly / hh - lx / hw) / 2; // ~ row
 
 		let col = Math.floor(u);
 		let row = Math.floor(v);
@@ -335,7 +354,13 @@ class Cursor {
 			}
 		}
 
-		if (row < 0 || col < 0 || row >= rows || col >= cols) return null;
+		if (
+			row < 0 ||
+			col < 0 ||
+			row >= this.gameMap.rows ||
+			col >= this.gameMap.columns
+		)
+			return null;
 		return [row, col];
 	}
 

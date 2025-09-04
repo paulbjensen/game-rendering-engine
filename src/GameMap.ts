@@ -3,7 +3,20 @@ import type Camera from "./Camera";
 import type { MapData } from "./types";
 import { delayUntil, imageHasLoaded } from "./utils";
 
+// --- helpers / local state ---
+const worldToScreen = (
+	wx: number,
+	wy: number,
+	zoom: number,
+	e: number,
+	f: number,
+) => ({
+	x: Math.round(wx * zoom + e),
+	y: Math.round(wy * zoom + f),
+});
+
 class GameMap {
+	background: HTMLCanvasElement;
 	target: HTMLCanvasElement;
 	cursorTarget: HTMLCanvasElement;
 	camera: Camera;
@@ -13,18 +26,21 @@ class GameMap {
 	selectedTile: [number, number] | null = null;
 	imageAssetSet: ImageAssetSet;
 	constructor({
+		background,
 		target,
 		cursorTarget,
 		camera,
 		map,
 		imageAssetSet,
 	}: {
+		background: HTMLCanvasElement;
 		target: HTMLCanvasElement;
 		cursorTarget: HTMLCanvasElement;
 		camera: Camera;
 		map: MapData;
 		imageAssetSet: ImageAssetSet;
 	}) {
+		this.background = background;
 		this.target = target;
 		this.cursorTarget = cursorTarget;
 		this.camera = camera;
@@ -35,6 +51,7 @@ class GameMap {
 		this.hasLoaded = this.hasLoaded.bind(this);
 		this.load = this.load.bind(this);
 		this.getMapCoords = this.getMapCoords.bind(this);
+		this.sampleBackground = this.sampleBackground.bind(this);
 		this.rows = map.length;
 		// TODO - check that the map columns are equal for all rows? - Perhaps we want to draw unusual shaped maps in the future - maybe like the inside of a building with curved walls as an example, or game maps that look like levels with rooms?
 		// Actually - we might want to create maps like dungeons as an example - we'd need to be able to do that
@@ -99,90 +116,149 @@ class GameMap {
 	}
 
 	drawCursorAt(row: number, column: number) {
-		// I'm going to do a cheeky tweak here
 		const ctx = this.cursorTarget.getContext("2d");
 		if (!ctx) {
 			console.error("Failed to get canvas context");
 			return;
 		}
 
-		const { mapX, mapY } = this.getMapCoords();
-
-		// NOTE - copied from draw - can be dried up
-
-		// Draw a diamond around the selected tile
+		// Clear overlay (draw in screen space)
+		ctx.setTransform(1, 0, 0, 1, 0, 0);
 		ctx.clearRect(0, 0, this.cursorTarget.width, this.cursorTarget.height);
+		ctx.imageSmoothingEnabled = false;
+
+		// Match the transform used in sampleBackground()
+		const zoom = this.camera.zoomLevel;
+		const panX = this.camera.panX; // screen px
+		const panY = this.camera.panY;
+
+		let e = this.target.width / 2 + panX - (this.background.width * zoom) / 2;
+		let f = this.target.height / 2 + panY - (this.background.height * zoom) / 2;
+		e = Math.round(e);
+		f = Math.round(f);
+
+		// World origin and sizes
+		const W = this.imageAssetSet.baseTileWidth;
+		const H = this.imageAssetSet.baseTileHeight;
+		const R = this.rows;
+		const Hmax = Math.max(
+			...this.imageAssetSet.imageAssets.map((a) => a.height ?? H),
+		);
+
+		const mapX = ((R - 1) * W) / 2;
+		const mapY = Hmax - H;
+
+		// Pick a tile (if stacked, use the first;)
+		const tileCode = this.map[row][column];
+		const code = Array.isArray(tileCode) ? tileCode[0] : tileCode;
+		const tile = this.imageAssetSet.imageAssets.find((t) => t.code === code);
+
+		const tW = tile?.width ?? W; // sprite width (may equal W)
+		const tH = tile?.height ?? H; // sprite height (>= H if tall)
+
+		// Compute the tile top-left in WORLD pixels (same math as drawBackground)
+		const wx = ((column - row) * tW) / 2 + mapX;
+		const wy = ((column + row) * H) / 2 + mapY - (tH - H);
+
+		// Convert to SCREEN pixels with the same transform
+		const { x, y } = worldToScreen(wx, wy, zoom, e, f);
+
+		// Draw a base-footprint diamond (W x H), scaled by zoom, in screen space
+		const tileWScreen = W * zoom;
+		const tileHScreen = H * zoom;
+
 		ctx.save();
 		ctx.strokeStyle = "white";
-		ctx.lineWidth = 2 * this.camera.zoomLevel;
-		// Calculate the top-left corner of the tile in screen coordinates
-		const tile = this.imageAssetSet.imageAssets.find(
-			(t) => t.code === this.map[row][column],
-		);
-		const tileWidth = this.imageAssetSet.baseTileWidth * this.camera.zoomLevel;
-		const tileHeight =
-			this.imageAssetSet.baseTileHeight * this.camera.zoomLevel;
-		const x = ((column - row) * tileWidth) / 2 + mapX;
-		const y =
-			((column + row) * tileHeight) / 2 +
-			mapY -
-			((tile?.height ? tile.height : this.imageAssetSet.baseTileHeight) -
-				this.imageAssetSet.baseTileHeight) *
-				this.camera.zoomLevel;
-
+		ctx.lineWidth = 2 * zoom; // stays visually consistent under zoom
 		ctx.beginPath();
-		ctx.moveTo(x + tileWidth / 2, y);
-		ctx.lineTo(x + tileWidth, y + tileHeight / 2);
-		ctx.lineTo(x + tileWidth / 2, y + tileHeight);
-		ctx.lineTo(x, y + tileHeight / 2);
+		ctx.moveTo(x + tileWScreen / 2, y);
+		ctx.lineTo(x + tileWScreen, y + tileHScreen / 2);
+		ctx.lineTo(x + tileWScreen / 2, y + tileHScreen);
+		ctx.lineTo(x, y + tileHScreen / 2);
 		ctx.closePath();
 		ctx.stroke();
 		ctx.restore();
 	}
 
 	drawPreview(tiles: [number, number][]) {
-		// I'm going to do a cheeky tweak here
 		const ctx = this.cursorTarget.getContext("2d");
 		if (!ctx) {
 			console.error("Failed to get canvas context");
 			return;
 		}
 
-		const { mapX, mapY } = this.getMapCoords();
+		// ----- helpers -----
+		const worldToScreen = (
+			wx: number,
+			wy: number,
+			zoom: number,
+			e: number,
+			f: number,
+		) => ({
+			x: Math.round(wx * zoom + e),
+			y: Math.round(wy * zoom + f),
+		});
 
-		// NOTE - copied from draw - can be dried up
-
-		// Draw a diamond around the selected tile
+		// ----- clear + screen-space setup -----
+		ctx.setTransform(1, 0, 0, 1, 0, 0);
 		ctx.clearRect(0, 0, this.cursorTarget.width, this.cursorTarget.height);
-		ctx.save();
-		// Calculate the top-left corner of the tile in screen coordinates
-		for (const [row, column] of tiles) {
-			const tile = this.imageAssetSet.imageAssets.find(
-				(t) => t.code === this.map[row][column],
-			);
-			const tileWidth =
-				this.imageAssetSet.baseTileWidth * this.camera.zoomLevel;
-			const tileHeight =
-				this.imageAssetSet.baseTileHeight * this.camera.zoomLevel;
-			const x = ((column - row) * tileWidth) / 2 + mapX;
-			const y =
-				((column + row) * tileHeight) / 2 +
-				mapY -
-				((tile?.height ? tile.height : this.imageAssetSet.baseTileHeight) -
-					this.imageAssetSet.baseTileHeight) *
-					this.camera.zoomLevel;
+		ctx.imageSmoothingEnabled = false;
 
-			ctx.strokeStyle = "white";
-			ctx.lineWidth = 2 * this.camera.zoomLevel;
+		// Match the transform used in sampleBackground()
+		const zoom = this.camera.zoomLevel;
+		const panX = this.camera.panX; // screen pixels
+		const panY = this.camera.panY;
+
+		let e = this.target.width / 2 + panX - (this.background.width * zoom) / 2;
+		let f = this.target.height / 2 + panY - (this.background.height * zoom) / 2;
+		e = Math.round(e);
+		f = Math.round(f);
+
+		// World origin & base sizes (zoom = 1)
+		const W = this.imageAssetSet.baseTileWidth;
+		const H = this.imageAssetSet.baseTileHeight;
+		const R = this.rows;
+		const Hmax = Math.max(
+			...this.imageAssetSet.imageAssets.map((a) => a.height ?? H),
+		);
+
+		const mapX = ((R - 1) * W) / 2;
+		const mapY = Hmax - H;
+
+		// ----- draw each preview diamond in screen space -----
+		ctx.save();
+		ctx.strokeStyle = "white";
+		ctx.lineWidth = 2 * zoom;
+
+		const tileWScreen = W * zoom;
+		const tileHScreen = H * zoom;
+
+		for (const [row, column] of tiles) {
+			const tileCode = this.map[row][column];
+			const code = Array.isArray(tileCode) ? tileCode[0] : tileCode;
+			const tile = this.imageAssetSet.imageAssets.find((t) => t.code === code);
+
+			const tW = tile?.width ?? W; // sprite width used in background draw
+			const tH = tile?.height ?? H; // sprite height used in background draw
+
+			// World top-left of this tile (match drawBackground math)
+			const wx = ((column - row) * tW) / 2 + mapX;
+			const wy = ((column + row) * H) / 2 + mapY - (tH - H);
+
+			// Convert to screen
+			const { x, y } = worldToScreen(wx, wy, zoom, e, f);
+
+			// Draw W×H diamond footprint (scaled by zoom)
 			ctx.beginPath();
-			ctx.moveTo(x + tileWidth / 2, y);
-			ctx.lineTo(x + tileWidth, y + tileHeight / 2);
-			ctx.lineTo(x + tileWidth / 2, y + tileHeight);
-			ctx.lineTo(x, y + tileHeight / 2);
+			ctx.moveTo(x + tileWScreen / 2, y);
+			ctx.lineTo(x + tileWScreen, y + tileHScreen / 2);
+			ctx.lineTo(x + tileWScreen / 2, y + tileHScreen);
+			ctx.lineTo(x, y + tileHScreen / 2);
 			ctx.closePath();
 			ctx.stroke();
-			ctx.restore();
 		}
+
+		ctx.restore();
 	}
 
 	clearPreview() {
@@ -194,83 +270,100 @@ class GameMap {
 		ctx.clearRect(0, 0, this.cursorTarget.width, this.cursorTarget.height);
 	}
 
-	draw() {
+	sampleBackground() {
 		const ctx = this.target.getContext("2d");
 		if (!ctx) {
 			console.error("Failed to get canvas context");
 			return;
 		}
 
+		// 1) Clear with identity (screen space)
+		ctx.setTransform(1, 0, 0, 1, 0, 0);
 		ctx.clearRect(0, 0, this.target.width, this.target.height);
+		ctx.imageSmoothingEnabled = true;
+		ctx.imageSmoothingQuality = "high";
 
-		const { mapX, mapY } = this.getMapCoords();
+		const zoom = this.camera.zoomLevel;
+		const panX = this.camera.panX; // in screen pixels
+		const panY = this.camera.panY;
 
-		// row is mapped to width, height to column
-		for (let row = 0; row < this.rows; row++) {
-			for (let column = 0; column < this.columns; column++) {
-				// An array of arrays, it's nested by row, then by column
-				const tileCode = this.map[row][column];
-				if (Array.isArray(tileCode)) {
-					// If the tile code is an array, we need to render multiple tiles
-					for (const code of tileCode) {
-						const tile = this.imageAssetSet.imageAssets.find(
-							(t) => t.code === code,
-						);
-						if (!tile || !tile.image) continue;
+		const bgW = this.background.width;
+		const bgH = this.background.height;
+		const tgtW = this.target.width;
+		const tgtH = this.target.height;
 
-						const x =
-							(((column - row) * tile.width) / 2) * this.camera.zoomLevel +
-							mapX;
-						const y =
-							(((column + row) * this.imageAssetSet.baseTileHeight) / 2) *
-								this.camera.zoomLevel +
-							mapY -
-							(tile.height - this.imageAssetSet.baseTileHeight) *
-								this.camera.zoomLevel;
-						ctx.drawImage(
-							tile.image,
-							0,
-							0,
-							tile.width,
-							tile.height,
-							x,
-							y,
-							tile.width * this.camera.zoomLevel,
-							tile.height * this.camera.zoomLevel,
-						);
-					}
-				} else {
+		// 3) Compute translation so that at pan = 0 the background is centered.
+		//    We set the transform to: scale(zoom) then translate(e, f) in SCREEN pixels.
+		//    With drawImage(..., 0,0), the top-left of the background will land at (e,f).
+		//    To center: e = screenCenterX - scaledHalfBgW (+ panX), same for Y.
+		let e = tgtW / 2 + panX - (bgW * zoom) / 2;
+		let f = tgtH / 2 + panY - (bgH * zoom) / 2;
+
+		// 4) Optional: snap translation to whole pixels for crisp pixel-art
+		// (This avoids subpixel sampling of the scaled background.)
+		e = Math.round(e);
+		f = Math.round(f);
+
+		// 5) Apply matrix and draw once
+		ctx.setTransform(zoom, 0, 0, zoom, e, f);
+		ctx.drawImage(this.background, 0, 0);
+
+		// 6) Restore if you draw overlays in screen-space afterwards
+		ctx.setTransform(1, 0, 0, 1, 0, 0);
+	}
+
+	draw() {
+		return this.sampleBackground();
+	}
+
+	drawBackground() {
+		const W = this.imageAssetSet.baseTileWidth;
+		const H = this.imageAssetSet.baseTileHeight;
+		const R = this.rows;
+		const C = this.columns;
+
+		const Wmax = Math.max(
+			...this.imageAssetSet.imageAssets.map((a) => a.width ?? W),
+		);
+		const Hmax = Math.max(
+			...this.imageAssetSet.imageAssets.map((a) => a.height ?? H),
+		);
+
+		// Fit the widest/tallest sprite to avoid clipping
+		this.background.width = Math.ceil(((R + C) * W) / 2 + (Wmax - W));
+		this.background.height = Math.ceil(((R + C) * H) / 2 + (Hmax - H));
+
+		// World origin for the grid (snug, and centered for wide sprites)
+		const mapX = ((R - 1) * W) / 2 + (Wmax - W) / 2;
+		const mapY = Hmax - H;
+
+		const ctx = this.background.getContext("2d");
+		if (!ctx) return;
+		ctx.imageSmoothingEnabled = false;
+		ctx.clearRect(0, 0, this.background.width, this.background.height);
+
+		for (let row = 0; row < R; row++) {
+			for (let col = 0; col < C; col++) {
+				const codes = this.map[row][col];
+				const drawOne = (code: number) => {
 					const tile = this.imageAssetSet.imageAssets.find(
-						(t) => t.code === tileCode,
+						(t) => t.code === code,
 					);
-					if (!tile || !tile.image) continue;
+					if (!tile?.image) return;
 
-					const x =
-						(((column - row) * tile.width) / 2) * this.camera.zoomLevel + mapX;
-					const y =
-						(((column + row) * this.imageAssetSet.baseTileHeight) / 2) *
-							this.camera.zoomLevel +
-						mapY -
-						(tile.height - this.imageAssetSet.baseTileHeight) *
-							this.camera.zoomLevel;
-					ctx.drawImage(
-						tile.image,
-						0,
-						0,
-						tile.width,
-						tile.height,
-						x,
-						y,
-						tile.width * this.camera.zoomLevel,
-						tile.height * this.camera.zoomLevel,
-					);
-				}
+					const tW = tile.width ?? W;
+					const tH = tile.height ?? H;
+
+					// Place on the W×H lattice, center sprite horizontally, lift by overhang vertically
+					const x = ((col - row) * W) / 2 + mapX + (W - tW) / 2;
+					const y = ((col + row) * H) / 2 + mapY - (tH - H);
+
+					ctx.drawImage(tile.image, 0, 0, tW, tH, x, y, tW, tH);
+				};
+				if (Array.isArray(codes)) codes.forEach(drawOne);
+				else drawOne(codes);
 			}
 		}
-		// This is the cursor drawing logic that we will isolate and put into another class
-		// if (this.selectedTile) {
-		// 	this.drawCursorAt(...this.selectedTile);
-		// }
 	}
 }
 

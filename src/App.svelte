@@ -95,6 +95,7 @@
             This is fun but will it handle everything that is needed, 
             especially characters and clicking on objects?
         */
+        const backgroundCanvas = document.getElementById('background') as HTMLCanvasElement;
         const mapCanvas = document.getElementById('map') as HTMLCanvasElement;
         const cursorCanvas = document.getElementById('cursor') as HTMLCanvasElement;
         if (!mapCanvas || !cursorCanvas) {
@@ -102,7 +103,7 @@
             throw new Error('Canvas element for map or cursor not found');
         }
 
-        gameMap = new GameMap({ target: mapCanvas, cursorTarget: cursorCanvas, camera, map, imageAssetSet });
+        gameMap = new GameMap({ background: backgroundCanvas, target: mapCanvas, cursorTarget: cursorCanvas, camera, map, imageAssetSet });
 
         // NOTE - check if touch needs to be attached to cursor canvas
         touch.attach(cursorCanvas);
@@ -111,12 +112,27 @@
 
         /* Resizes the canvas elements so that they always fit within the window */
         function resizeCanvases() {
+            if (!gameMap) return;
+
+            const W = gameMap.imageAssetSet.baseTileWidth;
+            const H = gameMap.imageAssetSet.baseTileHeight;
+            const Hmax = Math.max(
+            ...gameMap.imageAssetSet.imageAssets.map(a => a.height ?? H)
+            );
+
+            // Full map bounding box in *world* pixels (zoom=1)
+            backgroundCanvas.width  = Math.ceil((gameMap.rows + gameMap.columns) * W / 2);
+            backgroundCanvas.height = Math.ceil((gameMap.rows + gameMap.columns) * H / 2 + (Hmax - H));
+
+            // backgroundCanvas.width = gameMap.columns * imageAssetSet!.baseTileWidth;
+            // backgroundCanvas.height = gameMap.rows * imageAssetSet!.baseTileHeight;
             const canvasElements = [mapCanvas, cursorCanvas];
             canvasElements.forEach(canvas => {
                 canvas.width = window.innerWidth;
                 canvas.height = window.innerHeight;
             });
-            gameMap?.draw();
+            gameMap.drawBackground();
+            gameMap.draw();
         }
 
         /*
@@ -175,6 +191,7 @@
                 } else {
                     gameMap.map[tile] = [0, selectedImageAsset.code];
                 }
+                gameMap.drawBackground();
                 gameMap.draw();
             }
         });
@@ -184,6 +201,7 @@
                 for (const tile of tiles) {
                     gameMap.map[tile[0]][tile[1]] = [0, selectedImageAsset.code];
                 }
+                gameMap.drawBackground();
                 gameMap.draw();
             }
         });
@@ -213,6 +231,7 @@
             const game = gameManager.load(name);
             if (game && gameMap) {
                 gameMap.updateMap(game.data);
+                gameMap.drawBackground();
                 gameMap.draw();
             }
         });
@@ -281,6 +300,9 @@
         height:100dvh;
     }
 
+    #background {
+        display: none;
+    }
 </style>
 
 <main>
@@ -288,6 +310,7 @@
         <div id="fps-count">{$fpsResult} fps</div>
     {/if}
     <div id="game">
+        <canvas id="background"></canvas>
         <canvas id="map">
             Your browser does not support the canvas element.
         </canvas>
