@@ -282,9 +282,6 @@ class Cursor {
 
 		const currentSelectedTile = this.gameMap?.selectedTile;
 		this.calculatePositionOnMap();
-		for (const tile of this.strokeTiles) {
-			//this.eventEmitter.emit("click", tile);
-		}
 		if (this.hasChanged(currentSelectedTile, this.gameMap?.selectedTile)) {
 			this.gameMap?.draw();
 		}
