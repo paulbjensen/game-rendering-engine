@@ -103,9 +103,46 @@ class Mouse {
 		}
 	}
 
+	/* This will scroll in the direction of the screen as edges */
+	scrollScreen(event: MouseEvent) {
+		const edgeThreshold = 30; // pixels from edge to trigger panning
+		const rect = this.target?.getBoundingClientRect();
+		if (!rect) return;
+
+		const mouseX = event.clientX - rect.left;
+		const mouseY = event.clientY - rect.top;
+
+		if (mouseX < edgeThreshold) {
+			// Check left/right edges
+			this.eventEmitter.emit("startPanning", "left");
+		} else {
+			this.eventEmitter.emit("stopPanning", "left");
+		}
+		if (mouseX > rect.width - edgeThreshold) {
+			this.eventEmitter.emit("startPanning", "right");
+		} else {
+			this.eventEmitter.emit("stopPanning", "right");
+		}
+
+		if (mouseY < edgeThreshold) {
+			// Check top/bottom edges
+			this.eventEmitter.emit("startPanning", "up");
+		} else {
+			this.eventEmitter.emit("stopPanning", "up");
+		}
+		if (mouseY > rect.height - edgeThreshold) {
+			this.eventEmitter.emit("startPanning", "down");
+		} else {
+			this.eventEmitter.emit("stopPanning", "down");
+		}
+	}
+
 	onMouseMove(event: MouseEvent) {
-		if (!this.mousePanning) return;
-		this.adjustCameraPan(event);
+		if (!this.mousePanning) {
+			this.scrollScreen(event);
+		} else {
+			this.adjustCameraPan(event);
+		}
 	}
 
 	/*
