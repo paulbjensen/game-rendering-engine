@@ -1,6 +1,5 @@
 <script lang="ts">
     import { onDestroy, onMount } from 'svelte';
-    import { fps } from "@sveu/browser"
     import eventEmitter from './eventEmitter';
     import Camera from './Camera';
     import Keyboard from './controls/keyboard/Keyboard';
@@ -18,9 +17,11 @@
     import LoadModal from './modals/load/LoadModal.svelte';
     import SaveModal from './modals/save/SaveModal.svelte';
     import keyboardOptions from './config/keyboardOptions';
+    import FPSCounter from './lib/fpsCounter/FPSCounter.svelte';
 
+    // Used to toggle the FPSCounter component via keyboard controls
     let enableFPSCounter = $state(false);
-    const fpsResult = fps();
+    const toggleFPSCounter = () => enableFPSCounter = !enableFPSCounter;
 
     const camera = new Camera({ eventEmitter, maxZoomLevel: 4, minZoomLevel: 0.5 });
     const touch = new Touch({ eventEmitter });
@@ -225,9 +226,7 @@
             }
         });
 
-        eventEmitter.on('toggleFPSCounter', () => {
-            enableFPSCounter = !enableFPSCounter;
-        });
+        eventEmitter.on('toggleFPSCounter', toggleFPSCounter);
 
         eventEmitter.on('showLoadModal', () => {
             showLoadModal = true;
@@ -236,9 +235,6 @@
         eventEmitter.on('showSaveModal', () => {
             showSaveModal = true;
         });
-
-
-
 
         // Load map assets then resize the canvas once loaded
         await gameMap?.load();
@@ -256,23 +252,6 @@
 </script>
 
 <style>
-    #fps-count {
-        position: absolute;
-        z-index: 3;
-        top: 20px;
-        right: 20px;
-        border: solid 1px rgba(255,255,255,0.2);
-        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
-        padding: 8px;
-        border-radius: 8px;
-        background: rgba(0,0,0,0.2);
-        backdrop-filter: blur(10px);
-        color: white;
-        font-family:Arial, Helvetica, sans-serif;
-        text-transform: uppercase;
-        font-weight: bold;
-    }
-
     #map, #cursor {
         position:absolute;
         top: 0px;
@@ -288,9 +267,7 @@
 </style>
 
 <main>
-    {#if enableFPSCounter}
-        <div id="fps-count">{$fpsResult} fps</div>
-    {/if}
+    <FPSCounter show={enableFPSCounter} />
     <div id="game">
         <canvas id="background"></canvas>
         <canvas id="map"></canvas>

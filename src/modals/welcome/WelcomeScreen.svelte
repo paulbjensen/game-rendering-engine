@@ -141,7 +141,7 @@
 <div id="welcome-screen-background">
     <div id="welcome-modal">
         {#if currentScreen==='welcome'}
-                <img src="/img/logo.svg" width="300" alt="Babsland logo">
+                <img src="/img/logo.svg" alt="Babsland logo">
                 <div id="welcome-screen-options">
                     <button onclick={hide}>Start</button>
                     <button onclick={() => loadScreen('load')}>Load Map</button>
