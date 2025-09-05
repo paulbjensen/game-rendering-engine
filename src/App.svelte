@@ -28,14 +28,11 @@
     const mouse = new Mouse({ eventEmitter });
     const cursor = new Cursor({ eventEmitter });
     const gameManager = new GameManager();
+
     let gameMap: GameMap | null = null;
-
     let imageAssetSet: ImageAssetSet | null = $state(null);
-
     let selectedImageAsset: ImageAsset | null = $state(null);
-
     let appMode: AppMode = $state('navigation');
-
     let gameName: string = $state('currentGame');
 
     // Toggles showing/hiding the load modal
@@ -44,7 +41,7 @@
     // Toggles showing/hiding the save modal
     let showSaveModal = $state(false);
 
-    const setAppmode = (mode: AppMode) => {
+    function setAppMode (mode: AppMode) {
         if (mode === "navigation") {
             mouse.mousePanning = true;
             mouse.momentum = true;
@@ -145,6 +142,9 @@
         // Call the resizeCanvas function initially and when the window is resized
         window.addEventListener('resize', resizeCanvases);
 
+        // This will be called when the camera is updated, so that we can 
+        // redraw the camera, as well as update the cursor's selectedTile if 
+        // needed
         function cameraUpdated() {
             if (!gameMap) return;
             gameMap.draw();
@@ -153,6 +153,73 @@
                 gameMap.selectedTile
             ) {
                 gameMap.drawCursorAt(...gameMap.selectedTile)
+            }
+        }
+
+        // This is triggered when the user clicks on a tile
+        function clickOnTile (tile: [number, number] | null) {
+            if (tile && selectedImageAsset && gameMap) {
+                if (Array.isArray(tile)) {
+                    gameMap.map[tile[0]][tile[1]] = [0, selectedImageAsset.code];
+                } else {
+                    gameMap.map[tile] = [0, selectedImageAsset.code];
+                }
+                gameMap.drawBackground();
+                gameMap.draw();
+            }
+        }
+
+        // This is triggered when the user clicks on a set of tiles
+        function clickOnTiles (tiles: [number, number][]) {
+            if (tiles.length === 0) return;
+            if (selectedImageAsset && gameMap) {
+                for (const tile of tiles) {
+                    gameMap.map[tile[0]][tile[1]] = [0, selectedImageAsset.code];
+                }
+                gameMap.drawBackground();
+                gameMap.draw();
+            }
+        }
+
+        // This is used to draw a preview of where the selected tiles are
+        function drawPreview(tiles: [number, number][]) {
+            if (tiles.length === 0) return;
+            if (selectedImageAsset && gameMap) {
+                gameMap.drawPreview(tiles);
+            }
+        }
+
+        // This clears the preview of the selected tiles
+        function clearPreview () {
+            if (gameMap) { gameMap?.clearPreview(); }
+        }
+
+        // Saves the game
+        function saveGame (name:string) {
+            if (gameMap) {
+                gameName = name;
+                gameManager.save(name, gameMap.map);
+                alert('Game saved!');
+            }
+        }
+
+        // Loads the game
+        function loadGame (name?:string) {
+            if (!name) name = 'currentGame';
+            gameName = name;
+            const game = gameManager.load(name);
+            if (game && gameMap) {
+                gameMap.updateMap(game.data);
+                gameMap.drawBackground();
+                gameMap.draw();
+            }
+        } 
+
+        // Deletes a game
+        function deleteGame (name:string) {
+            if (confirm("Are you sure you want to delete this game?")) {
+                gameManager.delete(name);
+                alert('Game deleted!');
             }
         }
 
@@ -167,71 +234,18 @@
         eventEmitter.on('recenter', camera.resetPan);
         eventEmitter.on('cameraUpdated', cameraUpdated);
         eventEmitter.on('selectImageAsset', selectImageAsset);
-        eventEmitter.on('click', (tile: [number, number] | null) => {
-            if (tile && selectedImageAsset && gameMap) {
-                if (Array.isArray(tile)) {
-                    gameMap.map[tile[0]][tile[1]] = [0, selectedImageAsset.code];
-                } else {
-                    gameMap.map[tile] = [0, selectedImageAsset.code];
-                }
-                gameMap.drawBackground();
-                gameMap.draw();
-            }
-        });
-        eventEmitter.on('clickBatch', (tiles: [number, number][]) => {
-            if (tiles.length === 0) return;
-            if (selectedImageAsset && gameMap) {
-                for (const tile of tiles) {
-                    gameMap.map[tile[0]][tile[1]] = [0, selectedImageAsset.code];
-                }
-                gameMap.drawBackground();
-                gameMap.draw();
-            }
-        });
-
-        eventEmitter.on('drawPreview', (tiles: [number, number][]) => {
-            if (tiles.length === 0) return;
-            if (selectedImageAsset && gameMap) {
-                gameMap.drawPreview(tiles);
-            }
-        });
-
-        eventEmitter.on('clearPreview', () => {
-            if (gameMap) { gameMap.clearPreview(); }
-        });
-
-        eventEmitter.on('setAppMode', setAppmode);
-        eventEmitter.on('saveGame', (name:string) => {
-            if (gameMap) {
-                gameName = name;
-                gameManager.save(name, gameMap.map);
-                alert('Game saved!');
-            }
-        });
-        eventEmitter.on('loadGame', (name?:string) => {
-            if (!name) name = 'currentGame';
-            gameName = name;
-            const game = gameManager.load(name);
-            if (game && gameMap) {
-                gameMap.updateMap(game.data);
-                gameMap.drawBackground();
-                gameMap.draw();
-            }
-        });
-
-        eventEmitter.on('deleteGame', (name:string) => {
-            if (confirm("Are you sure you want to delete this game?")) {
-                gameManager.delete(name);
-                alert('Game deleted!');
-            }
-        });
-
+        eventEmitter.on('click', clickOnTile);
+        eventEmitter.on('clickBatch', clickOnTiles);
+        eventEmitter.on('drawPreview', drawPreview);
+        eventEmitter.on('clearPreview', clearPreview);
+        eventEmitter.on('setAppMode', setAppMode);
+        eventEmitter.on('saveGame', saveGame);
+        eventEmitter.on('loadGame', loadGame);
+        eventEmitter.on('deleteGame', deleteGame);
         eventEmitter.on('toggleFPSCounter', toggleFPSCounter);
-
         eventEmitter.on('showLoadModal', () => {
             showLoadModal = true;
         });
-
         eventEmitter.on('showSaveModal', () => {
             showSaveModal = true;
         });
