@@ -1,19 +1,15 @@
 import type ImageAssetSet from "./assets/ImageAssetSet";
 import type Camera from "./Camera";
+import {
+	getViewTransform,
+	type MapBounds,
+	measureMapBounds,
+	rcToWorldTopLeft,
+	snapped,
+	worldToScreen,
+} from "./lib/viewport/viewport";
 import type { MapData } from "./types";
 import { delayUntil, imageHasLoaded } from "./utils";
-
-// --- helpers / local state ---
-const worldToScreen = (
-	wx: number,
-	wy: number,
-	zoom: number,
-	e: number,
-	f: number,
-) => ({
-	x: Math.round(wx * zoom + e),
-	y: Math.round(wy * zoom + f),
-});
 
 class GameMap {
 	background: HTMLCanvasElement;
@@ -25,6 +21,15 @@ class GameMap {
 	columns: number;
 	selectedTile: [number, number] | null = null;
 	imageAssetSet: ImageAssetSet;
+	_bounds?: MapBounds;
+	_metrics?: {
+		W: number;
+		H: number;
+		Wmax: number;
+		Hmax: number;
+		rows: number;
+		cols: number;
+	};
 	constructor({
 		background,
 		target,
@@ -115,66 +120,45 @@ class GameMap {
 		return { mapX, mapY };
 	}
 
-	drawCursorAt(row: number, column: number) {
+	drawCursorAt(row: number, col: number) {
 		const ctx = this.cursorTarget.getContext("2d");
-		if (!ctx) {
-			console.error("Failed to get canvas context");
-			return;
-		}
+		if (!ctx) return;
 
-		// Clear overlay (draw in screen space)
+		const tf = getViewTransform({
+			targetW: this.target.width,
+			targetH: this.target.height,
+			bgW: this.background.width,
+			bgH: this.background.height,
+			zoom: this.camera.zoomLevel,
+			panX: this.camera.panX,
+			panY: this.camera.panY,
+		});
+		const tfSnap = snapped(tf);
+
+		if (!this._metrics || !this._bounds) return;
+
+		const { wx, wy } = rcToWorldTopLeft(row, col, this._metrics, this._bounds);
+		const { x, y } = worldToScreen(wx, wy, tfSnap);
+
+		const W = this._metrics.W,
+			H = this._metrics.H;
+
 		ctx.setTransform(1, 0, 0, 1, 0, 0);
 		ctx.clearRect(0, 0, this.cursorTarget.width, this.cursorTarget.height);
 		ctx.imageSmoothingEnabled = false;
 
-		// Match the transform used in sampleBackground()
-		const zoom = this.camera.zoomLevel;
-		const panX = this.camera.panX; // screen px
-		const panY = this.camera.panY;
-
-		let e = this.target.width / 2 + panX - (this.background.width * zoom) / 2;
-		let f = this.target.height / 2 + panY - (this.background.height * zoom) / 2;
-		e = Math.round(e);
-		f = Math.round(f);
-
-		// World origin and sizes
-		const W = this.imageAssetSet.baseTileWidth;
-		const H = this.imageAssetSet.baseTileHeight;
-		const R = this.rows;
-		const Hmax = Math.max(
-			...this.imageAssetSet.imageAssets.map((a) => a.height ?? H),
-		);
-
-		const mapX = ((R - 1) * W) / 2;
-		const mapY = Hmax - H;
-
-		// Pick a tile (if stacked, use the first;)
-		const tileCode = this.map[row][column];
-		const code = Array.isArray(tileCode) ? tileCode[0] : tileCode;
-		const tile = this.imageAssetSet.imageAssets.find((t) => t.code === code);
-
-		const tW = tile?.width ?? W; // sprite width (may equal W)
-		const tH = tile?.height ?? H; // sprite height (>= H if tall)
-
-		// Compute the tile top-left in WORLD pixels (same math as drawBackground)
-		const wx = ((column - row) * tW) / 2 + mapX;
-		const wy = ((column + row) * H) / 2 + mapY - (tH - H);
-
-		// Convert to SCREEN pixels with the same transform
-		const { x, y } = worldToScreen(wx, wy, zoom, e, f);
-
-		// Draw a base-footprint diamond (W x H), scaled by zoom, in screen space
-		const tileWScreen = W * zoom;
-		const tileHScreen = H * zoom;
-
 		ctx.save();
 		ctx.strokeStyle = "white";
-		ctx.lineWidth = 2 * zoom; // stays visually consistent under zoom
+		ctx.lineWidth = 2 * this.camera.zoomLevel;
+
+		const tW = W * this.camera.zoomLevel;
+		const tH = H * this.camera.zoomLevel;
+
 		ctx.beginPath();
-		ctx.moveTo(x + tileWScreen / 2, y);
-		ctx.lineTo(x + tileWScreen, y + tileHScreen / 2);
-		ctx.lineTo(x + tileWScreen / 2, y + tileHScreen);
-		ctx.lineTo(x, y + tileHScreen / 2);
+		ctx.moveTo(x + tW / 2, y);
+		ctx.lineTo(x + tW, y + tH / 2);
+		ctx.lineTo(x + tW / 2, y + tH);
+		ctx.lineTo(x, y + tH / 2);
 		ctx.closePath();
 		ctx.stroke();
 		ctx.restore();
@@ -182,73 +166,48 @@ class GameMap {
 
 	drawPreview(tiles: [number, number][]) {
 		const ctx = this.cursorTarget.getContext("2d");
-		if (!ctx) {
-			console.error("Failed to get canvas context");
-			return;
-		}
+		if (!ctx || !this._metrics || !this._bounds) return;
 
-		// ----- helpers -----
-		const worldToScreen = (
-			wx: number,
-			wy: number,
-			zoom: number,
-			e: number,
-			f: number,
-		) => ({
-			x: Math.round(wx * zoom + e),
-			y: Math.round(wy * zoom + f),
+		// Build the same view transform as sampleBackground()
+		const tf = getViewTransform({
+			targetW: this.target.width,
+			targetH: this.target.height,
+			bgW: this.background.width,
+			bgH: this.background.height,
+			zoom: this.camera.zoomLevel,
+			panX: this.camera.panX,
+			panY: this.camera.panY,
 		});
+		const tfSnap = snapped(tf); // snap only for crisp on-screen lines
 
-		// ----- clear + screen-space setup -----
+		const W = this._metrics.W;
+		const H = this._metrics.H;
+		const zoom = this.camera.zoomLevel;
+		const tileWScreen = W * zoom;
+		const tileHScreen = H * zoom;
+
+		// Clear overlay in screen space
 		ctx.setTransform(1, 0, 0, 1, 0, 0);
 		ctx.clearRect(0, 0, this.cursorTarget.width, this.cursorTarget.height);
 		ctx.imageSmoothingEnabled = false;
 
-		// Match the transform used in sampleBackground()
-		const zoom = this.camera.zoomLevel;
-		const panX = this.camera.panX; // screen pixels
-		const panY = this.camera.panY;
-
-		let e = this.target.width / 2 + panX - (this.background.width * zoom) / 2;
-		let f = this.target.height / 2 + panY - (this.background.height * zoom) / 2;
-		e = Math.round(e);
-		f = Math.round(f);
-
-		// World origin & base sizes (zoom = 1)
-		const W = this.imageAssetSet.baseTileWidth;
-		const H = this.imageAssetSet.baseTileHeight;
-		const R = this.rows;
-		const Hmax = Math.max(
-			...this.imageAssetSet.imageAssets.map((a) => a.height ?? H),
-		);
-
-		const mapX = ((R - 1) * W) / 2;
-		const mapY = Hmax - H;
-
-		// ----- draw each preview diamond in screen space -----
 		ctx.save();
 		ctx.strokeStyle = "white";
 		ctx.lineWidth = 2 * zoom;
 
-		const tileWScreen = W * zoom;
-		const tileHScreen = H * zoom;
+		for (const [row, col] of tiles) {
+			// World top-left of this tile's base footprint (W×H lattice)
+			const { wx, wy } = rcToWorldTopLeft(
+				row,
+				col,
+				this._metrics,
+				this._bounds,
+			);
 
-		for (const [row, column] of tiles) {
-			const tileCode = this.map[row][column];
-			const code = Array.isArray(tileCode) ? tileCode[0] : tileCode;
-			const tile = this.imageAssetSet.imageAssets.find((t) => t.code === code);
+			// Convert to screen using the same (snapped) transform as rendering
+			const { x, y } = worldToScreen(wx, wy, tfSnap);
 
-			const tW = tile?.width ?? W; // sprite width used in background draw
-			const tH = tile?.height ?? H; // sprite height used in background draw
-
-			// World top-left of this tile (match drawBackground math)
-			const wx = ((column - row) * tW) / 2 + mapX;
-			const wy = ((column + row) * H) / 2 + mapY - (tH - H);
-
-			// Convert to screen
-			const { x, y } = worldToScreen(wx, wy, zoom, e, f);
-
-			// Draw W×H diamond footprint (scaled by zoom)
+			// Draw the diamond footprint (W×H) in screen space
 			ctx.beginPath();
 			ctx.moveTo(x + tileWScreen / 2, y);
 			ctx.lineTo(x + tileWScreen, y + tileHScreen / 2);
@@ -272,43 +231,26 @@ class GameMap {
 
 	sampleBackground() {
 		const ctx = this.target.getContext("2d");
-		if (!ctx) {
-			console.error("Failed to get canvas context");
-			return;
-		}
+		if (!ctx) return;
 
-		// 1) Clear with identity (screen space)
+		const tf = getViewTransform({
+			targetW: this.target.width,
+			targetH: this.target.height,
+			bgW: this.background.width,
+			bgH: this.background.height,
+			zoom: this.camera.zoomLevel,
+			panX: this.camera.panX,
+			panY: this.camera.panY,
+		});
+
+		const tfSnap = snapped(tf); // for crisp rendering
+
 		ctx.setTransform(1, 0, 0, 1, 0, 0);
 		ctx.clearRect(0, 0, this.target.width, this.target.height);
 		ctx.imageSmoothingEnabled = true;
-		ctx.imageSmoothingQuality = "high";
 
-		const zoom = this.camera.zoomLevel;
-		const panX = this.camera.panX; // in screen pixels
-		const panY = this.camera.panY;
-
-		const bgW = this.background.width;
-		const bgH = this.background.height;
-		const tgtW = this.target.width;
-		const tgtH = this.target.height;
-
-		// 3) Compute translation so that at pan = 0 the background is centered.
-		//    We set the transform to: scale(zoom) then translate(e, f) in SCREEN pixels.
-		//    With drawImage(..., 0,0), the top-left of the background will land at (e,f).
-		//    To center: e = screenCenterX - scaledHalfBgW (+ panX), same for Y.
-		let e = tgtW / 2 + panX - (bgW * zoom) / 2;
-		let f = tgtH / 2 + panY - (bgH * zoom) / 2;
-
-		// 4) Optional: snap translation to whole pixels for crisp pixel-art
-		// (This avoids subpixel sampling of the scaled background.)
-		e = Math.round(e);
-		f = Math.round(f);
-
-		// 5) Apply matrix and draw once
-		ctx.setTransform(zoom, 0, 0, zoom, e, f);
+		ctx.setTransform(tfSnap.zoom, 0, 0, tfSnap.zoom, tfSnap.e, tfSnap.f);
 		ctx.drawImage(this.background, 0, 0);
-
-		// 6) Restore if you draw overlays in screen-space afterwards
 		ctx.setTransform(1, 0, 0, 1, 0, 0);
 	}
 
@@ -317,11 +259,11 @@ class GameMap {
 	}
 
 	drawBackground() {
+		const ctx = this.background.getContext("2d");
+		if (!ctx) return;
+
 		const W = this.imageAssetSet.baseTileWidth;
 		const H = this.imageAssetSet.baseTileHeight;
-		const R = this.rows;
-		const C = this.columns;
-
 		const Wmax = Math.max(
 			...this.imageAssetSet.imageAssets.map((a) => a.width ?? W),
 		);
@@ -329,42 +271,43 @@ class GameMap {
 			...this.imageAssetSet.imageAssets.map((a) => a.height ?? H),
 		);
 
-		// Fit the widest/tallest sprite to avoid clipping
-		this.background.width = Math.ceil(((R + C) * W) / 2 + (Wmax - W));
-		this.background.height = Math.ceil(((R + C) * H) / 2 + (Hmax - H));
+		const metrics = { W, H, Wmax, Hmax, rows: this.rows, cols: this.columns };
+		const bounds = measureMapBounds(metrics);
 
-		// World origin for the grid (snug, and centered for wide sprites)
-		const mapX = ((R - 1) * W) / 2 + (Wmax - W) / 2;
-		const mapY = Hmax - H;
+		this.background.width = bounds.bgW;
+		this.background.height = bounds.bgH;
 
-		const ctx = this.background.getContext("2d");
-		if (!ctx) return;
 		ctx.imageSmoothingEnabled = false;
-		ctx.clearRect(0, 0, this.background.width, this.background.height);
+		ctx.clearRect(0, 0, bounds.bgW, bounds.bgH);
 
-		for (let row = 0; row < R; row++) {
-			for (let col = 0; col < C; col++) {
-				const codes = this.map[row][col];
+		for (let r = 0; r < this.rows; r++) {
+			for (let c = 0; c < this.columns; c++) {
+				const codes = this.map[r][c];
 				const drawOne = (code: number) => {
 					const tile = this.imageAssetSet.imageAssets.find(
 						(t) => t.code === code,
 					);
 					if (!tile?.image) return;
 
+					// base-grid placement + sprite centering
 					const tW = tile.width ?? W;
 					const tH = tile.height ?? H;
 
-					// Place on the W×H lattice, center sprite horizontally, lift by overhang vertically
-					const x = ((col - row) * W) / 2 + mapX + (W - tW) / 2;
-					const y = ((col + row) * H) / 2 + mapY - (tH - H);
+					const { wx, wy } = rcToWorldTopLeft(r, c, metrics, bounds);
+					const x = wx + (W - tW) / 2;
+					const y = wy - (tH - H);
 
 					ctx.drawImage(tile.image, 0, 0, tW, tH, x, y, tW, tH);
 				};
+
 				if (Array.isArray(codes)) codes.forEach(drawOne);
 				else drawOne(codes);
 			}
 		}
+
+		// Store for reuse
+		this._bounds = bounds;
+		this._metrics = metrics;
 	}
 }
-
 export default GameMap;

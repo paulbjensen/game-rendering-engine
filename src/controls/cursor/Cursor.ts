@@ -1,6 +1,12 @@
 import type EventEmitter from "@anephenix/event-emitter";
 import type Camera from "../../Camera";
 import type GameMap from "../../GameMap";
+import type { GridMetrics } from "../../lib/viewport/viewport";
+import {
+	getViewTransform,
+	mouseToCanvasPx,
+	pickTileAtScreenPoint,
+} from "../../lib/viewport/viewport";
 import type { PaintConstraint } from "../../types";
 
 type Tile = [row: number, col: number];
@@ -205,17 +211,10 @@ class Cursor {
 
 		event.preventDefault();
 		event.stopPropagation();
-
-		const rect = this.target.getBoundingClientRect();
-		const scaleX = this.target.width / rect.width; // backing px per css px
-		const scaleY = this.target.height / rect.height; // (handles DPR & any CSS scale)
-		this.x = (event.clientX - rect.left) * scaleX;
-		this.y = (event.clientY - rect.top) * scaleY;
-
-		// this.x = event.clientX - rect.left;
-		// this.y = event.clientY - rect.top;
-
-		const tile = this.pixelToTile(this.x, this.y);
+		const { x, y } = mouseToCanvasPx(this.target, event);
+		this.x = x;
+		this.y = y;
+		const tile = this.pixelToTile(x, y);
 		if (tile) {
 			this.startStrokeAt(tile);
 		}
@@ -240,14 +239,12 @@ class Cursor {
 	onMouseMove(event: MouseEvent) {
 		if (!this.target) return;
 
-		const rect = this.target.getBoundingClientRect();
-		const scaleX = this.target.width / rect.width; // backing px per css px
-		const scaleY = this.target.height / rect.height; // (handles DPR & any CSS scale)
-		this.x = (event.clientX - rect.left) * scaleX;
-		this.y = (event.clientY - rect.top) * scaleY;
+		const { x, y } = mouseToCanvasPx(this.target, event);
+		this.x = x;
+		this.y = y;
 
 		if (this.isPainting) {
-			const tile = this.pixelToTile(this.x, this.y);
+			const tile = this.pixelToTile(x, y);
 			if (tile) {
 				const active: PaintConstraint = this.paintConstraint;
 
@@ -268,12 +265,9 @@ class Cursor {
 		if (!this.target) return;
 		if (this.isPainting) return;
 
-		const rect = this.target.getBoundingClientRect();
-		const scaleX = this.target.width / rect.width; // backing px per css px
-		const scaleY = this.target.height / rect.height; // (handles DPR & any CSS scale)
-		this.x = (event.clientX - rect.left) * scaleX;
-		this.y = (event.clientY - rect.top) * scaleY;
-
+		const { x, y } = mouseToCanvasPx(this.target, event);
+		this.x = x;
+		this.y = y;
 		const currentSelectedTile = this.gameMap?.selectedTile;
 		this.calculatePositionOnMap();
 		if (this.hasChanged(currentSelectedTile, this.gameMap?.selectedTile)) {
@@ -283,103 +277,26 @@ class Cursor {
 
 	// ---------- Pixel → tile ----------
 
-	private pixelToTile(px: number, py: number): Tile | null {
+	private pixelToTile(px: number, py: number): [number, number] | null {
 		if (!this.camera || !this.gameMap || !this.target) return null;
 
-		// --- camera / canvas / world sizes ---
-		const zoom = this.camera.zoomLevel;
-		const panX = this.camera.panX; // screen px
-		const panY = this.camera.panY;
+		// Ensure GameMap computed & stored metrics/bounds (as shown above)
+		const metrics: GridMetrics | undefined = this.gameMap._metrics;
+		const bounds = this.gameMap._bounds;
 
-		const bgW = this.gameMap.background.width;
-		const bgH = this.gameMap.background.height;
-		const tgtW = this.target.width;
-		const tgtH = this.target.height;
+		if (!metrics || !bounds) return null;
 
-		const W = this.gameMap.imageAssetSet.baseTileWidth;
-		const H = this.gameMap.imageAssetSet.baseTileHeight;
-		const R = this.gameMap.rows;
-		const C = this.gameMap.columns;
+		const tf = getViewTransform({
+			targetW: this.target.width,
+			targetH: this.target.height,
+			bgW: this.gameMap.background.width,
+			bgH: this.gameMap.background.height,
+			zoom: this.camera.zoomLevel,
+			panX: this.camera.panX,
+			panY: this.camera.panY,
+		});
 
-		// If you centered wide sprites in drawBackground(), keep these consistent.
-		const Wmax = Math.max(
-			...this.gameMap.imageAssetSet.imageAssets.map((a) => a.width ?? W),
-		);
-		const Hmax = Math.max(
-			...this.gameMap.imageAssetSet.imageAssets.map((a) => a.height ?? H),
-		);
-
-		// World origin used when drawing the background
-		const mapX = ((R - 1) * W) / 2 + (Wmax - W) / 2;
-		const mapY = Hmax - H;
-
-		// Same pan/zoom as sampleBackground() (do NOT round here for picking)
-		const e = tgtW / 2 + panX - (bgW * zoom) / 2;
-		const f = tgtH / 2 + panY - (bgH * zoom) / 2;
-
-		// --- screen -> world ---
-		const wx = (px - e) / zoom;
-		const wy = (py - f) / zoom;
-
-		// --- world -> lattice-local (base W×H grid) ---
-		const lx = wx - mapX;
-		const ly = wy - mapY;
-
-		const hw = W / 2;
-		const hh = H / 2;
-
-		// Continuous diamond coords
-		const u = (lx / hw + ly / hh) / 2; // ~ col
-		const v = (ly / hh - lx / hw) / 2; // ~ row
-
-		// Initial nearest-center guess (removes strong bias)
-		const EPS = 1e-6;
-		const col0 = Math.floor(u + 0.5 - EPS);
-		const row0 = Math.floor(v + 0.5 - EPS);
-
-		// Candidate neighborhood to de-bias tiny mismatches
-		const candidates: Tile[] = [
-			[row0, col0],
-			[row0, col0 + 1],
-			[row0 + 1, col0],
-			[row0 - 1, col0],
-			[row0, col0 - 1],
-			[row0 + 1, col0 + 1],
-			[row0 - 1, col0 - 1],
-		];
-
-		// Diamond center distance in SCREEN space (L1 / Manhattan in diamond metric)
-		const diamondHalfW = (W * zoom) / 2;
-		const diamondHalfH = (H * zoom) / 2;
-
-		let best: Tile | null = null;
-		let bestScore = Number.POSITIVE_INFINITY;
-
-		for (const [r, c] of candidates) {
-			if (r < 0 || c < 0 || r >= R || c >= C) continue;
-
-			// World top-left of this tile's base footprint (same as drawBackground grid)
-			const topLeftX = ((c - r) * W) / 2 + mapX + (W - W) / 2; // (W-W)/2 = 0; kept for clarity
-			const topLeftY = ((c + r) * H) / 2 + mapY - (H - H); // (H-H)   = 0
-
-			// Diamond center in WORLD then SCREEN
-			const centerWx = topLeftX + W / 2;
-			const centerWy = topLeftY + H / 2;
-			const centerSx = centerWx * zoom + e;
-			const centerSy = centerWy * zoom + f;
-
-			// L1 in diamond space (normalize by half extents so X/Y weigh evenly)
-			const score =
-				Math.abs(px - centerSx) / diamondHalfW +
-				Math.abs(py - centerSy) / diamondHalfH;
-
-			if (score < bestScore) {
-				bestScore = score;
-				best = [r, c];
-			}
-		}
-
-		return best;
+		return pickTileAtScreenPoint(px, py, metrics, bounds, tf);
 	}
 
 	calculatePositionOnMap() {
