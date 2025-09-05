@@ -119,15 +119,28 @@
         */
         function selectImageAsset (imageAsset: ImageAsset | null) {
             if (imageAsset && appMode === 'edit') {
+                // Mouse
                 mouse.mousePanning = false;
                 mouse.momentum = false;
+
+                // Cursor (painting)
                 cursor.enablePainting = true;
                 cursor.setPaintConstraint(imageAsset.paintConstraint);
+
+                // Touch: disable 1-finger pan while editing; keep pinch if you like
+                touch.setEnabled({ panning: false, pinch: true }); // or { panning: false, pinch: false }
             } else {
-                cursor.enablePainting = false;
+                // Mouse
                 mouse.mousePanning = true;
                 mouse.momentum = true;
+
+                // Cursor
+                cursor.enablePainting = false;
+
+                // Touch: re-enable gestures
+                touch.setEnabled({ panning: true, pinch: true });
             }
+
             selectedImageAsset = imageAsset;
         }
 

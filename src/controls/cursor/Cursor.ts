@@ -31,6 +31,10 @@ class Cursor {
 	private axisLock: AxisLock = null; // for axial mode only
 	private axisLockArmed = false; // becomes true after first movement
 
+	// touch state
+	private activeTouchId: number | null = null;
+	private touchListenerOpts = { capture: true, passive: false } as const;
+
 	constructor({
 		target,
 		eventEmitter,
@@ -43,11 +47,20 @@ class Cursor {
 		if (target) this.target = target;
 		this.eventEmitter = eventEmitter;
 
+		// bind mouse
 		this.onMouseMove = this.onMouseMove.bind(this);
 		this.onClick = this.onClick.bind(this);
 		this.onMouseDown = this.onMouseDown.bind(this);
 		this.onMouseUp = this.onMouseUp.bind(this);
 		this.onMouseLeave = this.onMouseLeave.bind(this);
+
+		// bind touch
+		this.onTouchStart = this.onTouchStart.bind(this);
+		this.onTouchMove = this.onTouchMove.bind(this);
+		this.onTouchEnd = this.onTouchEnd.bind(this);
+		this.onTouchCancel = this.onTouchCancel.bind(this);
+
+		// others
 		this.setPaintConstraint = this.setPaintConstraint.bind(this);
 		this.calculatePositionOnMap = this.calculatePositionOnMap.bind(this);
 	}
@@ -68,23 +81,20 @@ class Cursor {
 	private rasterizeDiagonal(a: Tile, b: Tile): Tile[] {
 		const out: Tile[] = [];
 
-		// Is the row the same?
+		// same row
 		if (a[0] === b[0]) {
 			const [row, col0] = a;
 			const [, col1] = b;
 			const step = col1 > col0 ? 1 : -1;
-			for (let c = col0; c !== col1 + step; c += step) {
-				out.push([row, c]);
-			}
+			for (let c = col0; c !== col1 + step; c += step) out.push([row, c]);
 			return out;
-			// Is the column the same?
-		} else if (a[1] === b[1]) {
+		}
+		// same column
+		if (a[1] === b[1]) {
 			const [row0, col] = a;
 			const [row1] = b;
 			const step = row1 > row0 ? 1 : -1;
-			for (let r = row0; r !== row1 + step; r += step) {
-				out.push([r, col]);
-			}
+			for (let r = row0; r !== row1 + step; r += step) out.push([r, col]);
 			return out;
 		}
 		return out;
@@ -97,23 +107,19 @@ class Cursor {
 		const dr = r1 - r0;
 		const dc = c1 - c0;
 
-		// Decide/keep lock
 		if (!this.axisLockArmed) {
-			// first movement decides axis by larger magnitude
 			this.axisLock = Math.abs(dr) >= Math.abs(dc) ? "row" : "col";
 			this.axisLockArmed = true;
 		}
 
 		const out: Tile[] = [];
 		if (this.axisLock === "row") {
-			// vary row, fixed col
 			const stepR = dr === 0 ? 0 : dr > 0 ? 1 : -1;
 			for (let r = r0; ; r += stepR) {
 				out.push([r, c0]);
 				if (r === r1 || stepR === 0) break;
 			}
 		} else {
-			// vary col, fixed row
 			const stepC = dc === 0 ? 0 : dc > 0 ? 1 : -1;
 			for (let c = c0; ; c += stepC) {
 				out.push([r0, c]);
@@ -123,7 +129,7 @@ class Cursor {
 		return out;
 	}
 
-	// NEW: rectangular area AABB between a and b (inclusive)
+	// rectangular area AABB between a and b (inclusive)
 	private rasterizeArea(a: Tile, b: Tile): Tile[] {
 		const [r0, c0] = a;
 		const [r1, c1] = b;
@@ -133,9 +139,7 @@ class Cursor {
 		const cMax = Math.max(c0, c1);
 		const out: Tile[] = [];
 		for (let r = rMin; r <= rMax; r++) {
-			for (let c = cMin; c <= cMax; c++) {
-				out.push([r, c]);
-			}
+			for (let c = cMin; c <= cMax; c++) out.push([r, c]);
 		}
 		return out;
 	}
@@ -150,7 +154,6 @@ class Cursor {
 		this.strokeStart = tile;
 		this.axisLock = null;
 		this.axisLockArmed = false;
-
 		this.strokeTiles = [tile];
 	}
 
@@ -158,17 +161,6 @@ class Cursor {
 		if (!this.isPainting || !this.strokeStart) return;
 
 		let segment: Tile[];
-		/*
-      Note - what I want to do is the following:
-
-      - Track the starting tile
-      - Track the ending tile
-
-      If the row of the start and end tile is the same, it is diagonal on that row
-      If the column of the start and end tile is the same, it is diagonal on that column
-
-      If they are not aligned, then it is an area
-    */
 		switch (constraint) {
 			case "axial":
 				segment = this.rasterizeAxial(this.strokeStart, tile);
@@ -176,7 +168,7 @@ class Cursor {
 			case "area":
 				segment = this.rasterizeArea(this.strokeStart, tile);
 				break;
-			default: // case "diagonal"
+			default:
 				segment = this.rasterizeDiagonal(this.strokeStart, tile);
 				break;
 		}
@@ -217,6 +209,7 @@ class Cursor {
 		const tile = this.pixelToTile(x, y);
 		if (tile) {
 			this.startStrokeAt(tile);
+			this.setStrokePreview([tile]);
 		}
 	}
 
@@ -247,7 +240,6 @@ class Cursor {
 			const tile = this.pixelToTile(x, y);
 			if (tile) {
 				const active: PaintConstraint = this.paintConstraint;
-
 				this.extendStrokeTo(tile, active);
 			}
 			return;
@@ -275,15 +267,118 @@ class Cursor {
 		}
 	}
 
+	// ---------- Touch helpers & events ----------
+
+	private touchToCanvasPx(
+		canvas: HTMLCanvasElement,
+		ev: TouchEvent,
+		touchId?: number,
+	) {
+		const touch =
+			touchId == null
+				? ev.changedTouches[0]
+				: (Array.from(ev.touches).find((t) => t.identifier === touchId) ??
+					Array.from(ev.changedTouches).find((t) => t.identifier === touchId));
+
+		if (!touch) return null;
+
+		const rect = canvas.getBoundingClientRect();
+		const scaleX = canvas.width / rect.width;
+		const scaleY = canvas.height / rect.height;
+		return {
+			x: (touch.clientX - rect.left) * scaleX,
+			y: (touch.clientY - rect.top) * scaleY,
+			identifier: touch.identifier,
+		};
+	}
+
+	private onTouchStart(ev: TouchEvent) {
+		if (!this.target) return;
+
+		// If painting is disabled, let Touch.ts handle gestures (pan/pinch)
+		if (!this.enablePainting) return;
+
+		// Only claim single-finger touches for painting; let 2+ fingers bubble
+		if (ev.touches.length !== 1) return;
+
+		// We are taking ownership of this single-finger gesture
+		ev.preventDefault();
+
+		if (this.activeTouchId != null) return;
+
+		const pt = this.touchToCanvasPx(this.target, ev);
+		if (!pt) return;
+
+		this.activeTouchId = pt.identifier;
+		this.x = pt.x;
+		this.y = pt.y;
+
+		const tile = this.pixelToTile(pt.x, pt.y);
+		if (tile) {
+			this.startStrokeAt(tile);
+			this.setStrokePreview([tile]);
+		}
+	}
+
+	private onTouchMove(ev: TouchEvent) {
+		if (!this.target) return;
+
+		// If not painting, don't consume; let Touch.ts handle panning/pinching
+		if (!this.enablePainting || this.activeTouchId == null) return;
+
+		const pt = this.touchToCanvasPx(this.target, ev, this.activeTouchId);
+		if (!pt) return;
+
+		// We are actively painting; prevent scrolling/defaults
+		ev.preventDefault();
+
+		this.x = pt.x;
+		this.y = pt.y;
+
+		if (this.isPainting) {
+			const tile = this.pixelToTile(pt.x, pt.y);
+			if (tile) this.extendStrokeTo(tile, this.paintConstraint);
+		}
+	}
+
+	private onTouchEnd(ev: TouchEvent) {
+		if (!this.enablePainting) return;
+
+		const ended = Array.from(ev.changedTouches).some(
+			(t) => t.identifier === this.activeTouchId,
+		);
+		if (!ended) return;
+
+		// We owned this gesture; prevent default to avoid synthetic clicks, etc.
+		ev.preventDefault();
+
+		if (this.isPainting) {
+			this.endStroke();
+			this.eventEmitter.emit("clickBatch", this.strokeTiles);
+		}
+
+		this.activeTouchId = null;
+	}
+
+	private onTouchCancel(ev: TouchEvent) {
+		if (!this.enablePainting) return;
+
+		const cancelled = Array.from(ev.changedTouches).some(
+			(t) => t.identifier === this.activeTouchId,
+		);
+		if (!cancelled) return;
+
+		if (this.isPainting) this.endStroke();
+		this.activeTouchId = null;
+	}
+
 	// ---------- Pixel → tile ----------
 
 	private pixelToTile(px: number, py: number): [number, number] | null {
 		if (!this.camera || !this.gameMap || !this.target) return null;
 
-		// Ensure GameMap computed & stored metrics/bounds (as shown above)
-		const metrics: GridMetrics | undefined = this.gameMap._metrics;
-		const bounds = this.gameMap._bounds;
-
+		const metrics: GridMetrics | undefined = (this.gameMap as any)._metrics;
+		const bounds = (this.gameMap as any)._bounds;
 		if (!metrics || !bounds) return null;
 
 		const tf = getViewTransform({
@@ -319,21 +414,71 @@ class Cursor {
 		this.target = target;
 		this.camera = camera;
 		this.gameMap = gameMap;
+
+		// Mouse
 		this.target.addEventListener("mousemove", this.onMouseMove);
 		this.target.addEventListener("click", this.onClick);
-
-		// capture phase so we win over the pan handler
 		this.target.addEventListener("mousedown", this.onMouseDown, true);
 		this.target.addEventListener("mouseup", this.onMouseUp, true);
 		this.target.addEventListener("mouseleave", this.onMouseLeave, true);
+
+		// Touch
+		this.target.addEventListener(
+			"touchstart",
+			this.onTouchStart,
+			this.touchListenerOpts,
+		);
+		this.target.addEventListener(
+			"touchmove",
+			this.onTouchMove,
+			this.touchListenerOpts,
+		);
+		this.target.addEventListener(
+			"touchend",
+			this.onTouchEnd,
+			this.touchListenerOpts,
+		);
+		this.target.addEventListener(
+			"touchcancel",
+			this.onTouchCancel,
+			this.touchListenerOpts,
+		);
+
+		// Prevent browser gestures on the canvas area
+		this.target.style.touchAction = "none";
 	}
 
 	detach() {
+		// Mouse
 		this.target?.removeEventListener("mousemove", this.onMouseMove);
 		this.target?.removeEventListener("click", this.onClick);
 		this.target?.removeEventListener("mousedown", this.onMouseDown, true);
 		this.target?.removeEventListener("mouseup", this.onMouseUp, true);
 		this.target?.removeEventListener("mouseleave", this.onMouseLeave, true);
+
+		// Touch
+		if (this.target) {
+			this.target.removeEventListener(
+				"touchstart",
+				this.onTouchStart,
+				this.touchListenerOpts,
+			);
+			this.target.removeEventListener(
+				"touchmove",
+				this.onTouchMove,
+				this.touchListenerOpts,
+			);
+			this.target.removeEventListener(
+				"touchend",
+				this.onTouchEnd,
+				this.touchListenerOpts,
+			);
+			this.target.removeEventListener(
+				"touchcancel",
+				this.onTouchCancel,
+				this.touchListenerOpts,
+			);
+		}
 	}
 }
 
