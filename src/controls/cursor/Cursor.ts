@@ -377,8 +377,8 @@ class Cursor {
 	private pixelToTile(px: number, py: number): [number, number] | null {
 		if (!this.camera || !this.gameMap || !this.target) return null;
 
-		const metrics: GridMetrics | undefined = (this.gameMap as any)._metrics;
-		const bounds = (this.gameMap as any)._bounds;
+		const metrics: GridMetrics | undefined = (this.gameMap as GameMap)._metrics;
+		const bounds = (this.gameMap as GameMap)._bounds;
 		if (!metrics || !bounds) return null;
 
 		const tf = getViewTransform({
