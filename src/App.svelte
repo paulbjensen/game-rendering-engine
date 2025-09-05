@@ -3,7 +3,7 @@
     import { fps } from "@sveu/browser"
     import eventEmitter from './eventEmitter';
     import Camera from './Camera';
-    import Keyboard, { type KeyboardOptions} from './controls/keyboard/Keyboard';
+    import Keyboard from './controls/keyboard/Keyboard';
     import Touch from './controls/Touch';
     import Mouse from './controls/Mouse';
     import Cursor from './controls/cursor/Cursor';
@@ -17,6 +17,7 @@
     import GameManager from './lib/GameManager/GameManager';
     import LoadModal from './modals/load/LoadModal.svelte';
     import SaveModal from './modals/save/SaveModal.svelte';
+    import keyboardOptions from './config/keyboardOptions';
 
     let enableFPSCounter = $state(false);
     const fpsResult = fps();
@@ -52,27 +53,6 @@
     };
 
     let hideWelcomeScreen = $state(false);
-
-    // Keyboard controls specified here
-    const keyboardOptions: KeyboardOptions = {
-        keydown: {
-            'ArrowUp': () => eventEmitter.emit('startPanning', 'up'),
-            'ArrowDown': () => eventEmitter.emit('startPanning', 'down'),
-            'ArrowLeft': () => eventEmitter.emit('startPanning', 'left'),
-            'ArrowRight': () => eventEmitter.emit('startPanning', 'right'),
-            '=': () => eventEmitter.emit('zoomIn'),
-            '-': () => eventEmitter.emit('zoomOut'),
-            '0': () => eventEmitter.emit('resetZoom'),
-            'c': () => eventEmitter.emit('recenter'),
-            'd': () => eventEmitter.emit('toggleFPSCounter')
-        },
-        keyup: {
-            'ArrowUp': () => eventEmitter.emit('stopPanning', 'up'),
-            'ArrowDown': () => eventEmitter.emit('stopPanning', 'down'),
-            'ArrowLeft': () => eventEmitter.emit('stopPanning', 'left'),
-            'ArrowRight': () => eventEmitter.emit('stopPanning', 'right')
-        }
-    };
 
     // Attach the keyboard event listeners
     const keyboard = new Keyboard(keyboardOptions);
@@ -164,6 +144,17 @@
         // Call the resizeCanvas function initially and when the window is resized
         window.addEventListener('resize', resizeCanvases);
 
+        function cameraUpdated() {
+            if (!gameMap) return;
+            gameMap.draw();
+            cursor.calculatePositionOnMap();
+            if (
+                gameMap.selectedTile
+            ) {
+                gameMap.drawCursorAt(...gameMap.selectedTile)
+            }
+        }
+
         // EventEmitter bindings
         eventEmitter.on('startPanning', camera.startPanning);
         eventEmitter.on('stopPanning', camera.stopPanning);
@@ -173,16 +164,7 @@
         eventEmitter.on('zoomIn', camera.zoomIn);
         eventEmitter.on('resetZoom', camera.resetZoom);
         eventEmitter.on('recenter', camera.resetPan);
-        eventEmitter.on('cameraUpdated', () => {
-            if (!gameMap) return;
-            gameMap.draw();
-            cursor.calculatePositionOnMap();
-            if (
-                gameMap.selectedTile    
-            ) {
-                gameMap.drawCursorAt(...gameMap.selectedTile)
-            }
-        });
+        eventEmitter.on('cameraUpdated', cameraUpdated);
         eventEmitter.on('selectImageAsset', selectImageAsset);
         eventEmitter.on('click', (tile: [number, number] | null) => {
             if (tile && selectedImageAsset && gameMap) {
@@ -311,9 +293,7 @@
     {/if}
     <div id="game">
         <canvas id="background"></canvas>
-        <canvas id="map">
-            Your browser does not support the canvas element.
-        </canvas>
+        <canvas id="map"></canvas>
         <canvas id="cursor"></canvas>
     </div>
     {#if imageAssetSet}
