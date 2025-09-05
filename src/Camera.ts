@@ -11,6 +11,7 @@ class Camera {
 	maxZoomLevel: number | null;
 	minZoomLevel: number | null;
 	private _zoomRaf?: number;
+	private _panRaf?: number;
 
 	constructor({
 		eventEmitter,
@@ -216,21 +217,27 @@ class Camera {
 		});
 	}
 
-	resetPanWithSmoothing() {
-		const duration = 500; // Duration of the smoothing effect in ms
+	resetPanWithSmoothing(opts?: { duration?: number }) {
+		const duration = opts?.duration ?? 500; // ms
 		const startX = this.panX;
 		const startY = this.panY;
+
+		if (startX === 0 && startY === 0) return;
+
+		// Cancel any in-flight pan animation
+		if (this._panRaf) cancelAnimationFrame(this._panRaf);
+
 		const startTime = performance.now();
 
-		const animate = (currentTime: number) => {
-			const elapsed = currentTime - startTime;
-			const t = Math.min(elapsed / duration, 1); // Normalize t to [0, 1]
+		// Ease-out cubic (same as resetZoomWithSmoothing)
+		const easeOut = (t: number) => 1 - (1 - t) ** 1.5;
 
-			// Apply easing (ease out)
-			const easing = t * (2 - t);
+		const tick = (now: number) => {
+			const t = Math.min(1, (now - startTime) / duration);
+			const k = easeOut(t); // 0 → 1
 
-			this.panX = startX * (1 - easing);
-			this.panY = startY * (1 - easing);
+			this.panX = startX * (1 - k);
+			this.panY = startY * (1 - k);
 
 			this.eventEmitter.emit("cameraUpdated", {
 				panX: this.panX,
@@ -239,11 +246,21 @@ class Camera {
 			});
 
 			if (t < 1) {
-				requestAnimationFrame(animate);
+				this._panRaf = requestAnimationFrame(tick);
+			} else {
+				// Snap exactly to 0 at the end
+				this.panX = 0;
+				this.panY = 0;
+				this.eventEmitter.emit("cameraUpdated", {
+					panX: this.panX,
+					panY: this.panY,
+					zoomLevel: this.zoomLevel,
+				});
+				this._panRaf = undefined;
 			}
 		};
 
-		requestAnimationFrame(animate);
+		this._panRaf = requestAnimationFrame(tick);
 	}
 
 	/*
