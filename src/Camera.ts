@@ -10,6 +10,7 @@ class Camera {
 	eventEmitter: InstanceType<typeof EventEmitter>;
 	maxZoomLevel: number | null;
 	minZoomLevel: number | null;
+	private _zoomRaf?: number;
 
 	constructor({
 		eventEmitter,
@@ -42,6 +43,7 @@ class Camera {
 		this.resetZoom = this.resetZoom.bind(this);
 		this.resetPan = this.resetPan.bind(this);
 		this.resetPanWithSmoothing = this.resetPanWithSmoothing.bind(this);
+		this.resetZoomWithSmoothing = this.resetZoomWithSmoothing.bind(this);
 		this.addPan = this.addPan.bind(this);
 		this.setZoom = this.setZoom.bind(this);
 	}
@@ -123,6 +125,82 @@ class Camera {
 			panY: this.panY,
 			zoomLevel: this.zoomLevel,
 		});
+	}
+
+	resetZoomWithSmoothing(opts?: { duration?: number; targetZoom?: number }) {
+		const duration = opts?.duration ?? 500; // ms
+		const targetZoom = opts?.targetZoom ?? 1;
+
+		const startZoom = this.zoomLevel;
+		const startX = this.panX;
+		const startY = this.panY;
+
+		// Nothing to do
+		if (
+			!Number.isFinite(startZoom) ||
+			startZoom <= 0 ||
+			startZoom === targetZoom
+		) {
+			this.zoomLevel = targetZoom;
+			// keep center locked by scaling pan to the final zoom
+			const scale = targetZoom / (startZoom || 1);
+			this.panX = startX * scale;
+			this.panY = startY * scale;
+			this.eventEmitter.emit("cameraUpdated", {
+				panX: this.panX,
+				panY: this.panY,
+				zoomLevel: this.zoomLevel,
+			});
+			return;
+		}
+
+		// Cancel any in-flight animation
+		if (this._zoomRaf) cancelAnimationFrame(this._zoomRaf);
+
+		const startTime = performance.now();
+
+		// Ease-out cubic: 1 - (1 - t)^3  (smooth start, gentle finish)
+		const easeOut = (t: number) => 1 - (1 - t) ** 3;
+
+		const tick = (now: number) => {
+			const t = Math.min(1, (now - startTime) / duration);
+			const k = easeOut(t); // 0..1
+
+			// Interpolate zoom
+			const z = startZoom + (targetZoom - startZoom) * k;
+
+			// Keep camera center fixed: pan scales proportionally with zoom
+			const scale = z / startZoom;
+			this.zoomLevel = z;
+			this.panX = startX * scale;
+			this.panY = startY * scale;
+
+			this.eventEmitter.emit("cameraUpdated", {
+				panX: this.panX,
+				panY: this.panY,
+				zoomLevel: this.zoomLevel,
+			});
+
+			if (t < 1) {
+				this._zoomRaf = requestAnimationFrame(tick);
+			} else {
+				// Snap to exact target at the end
+				this.zoomLevel = targetZoom;
+				const finalScale = targetZoom / startZoom;
+				this.panX = startX * finalScale;
+				this.panY = startY * finalScale;
+
+				this.eventEmitter.emit("cameraUpdated", {
+					panX: this.panX,
+					panY: this.panY,
+					zoomLevel: this.zoomLevel,
+				});
+
+				this._zoomRaf = undefined;
+			}
+		};
+
+		this._zoomRaf = requestAnimationFrame(tick);
 	}
 
 	/*

@@ -230,7 +230,7 @@
         eventEmitter.on('adjustZoom', adjustZoom);
         eventEmitter.on('zoomOut', camera.zoomOut);
         eventEmitter.on('zoomIn', camera.zoomIn);
-        eventEmitter.on('resetZoom', camera.resetZoom);
+        eventEmitter.on('resetZoom', camera.resetZoomWithSmoothing);
         eventEmitter.on('recenter', camera.resetPanWithSmoothing);
         eventEmitter.on('cameraUpdated', cameraUpdated);
         eventEmitter.on('selectImageAsset', selectImageAsset);
