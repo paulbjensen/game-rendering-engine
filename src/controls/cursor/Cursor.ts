@@ -1,7 +1,7 @@
 import type EventEmitter from "@anephenix/event-emitter";
-import type Camera from "../Camera";
-import type GameMap from "../GameMap";
-import type { PaintConstraint } from "../types";
+import type Camera from "../../Camera";
+import type GameMap from "../../GameMap";
+import type { PaintConstraint } from "../../types";
 
 type Tile = [row: number, col: number];
 type AxisLock = "row" | "col" | null;
@@ -18,7 +18,6 @@ class Cursor {
 	// painting state
 	private isPainting = false;
 	private strokeTiles: Tile[] = [];
-	private strokeSeen = new Set<string>();
 	private strokeStart: Tile | null = null;
 
 	// constraint + axis lock
@@ -139,12 +138,9 @@ class Cursor {
 		return out;
 	}
 
-	// I think that this is the function that causes the huge spike in jankiness
 	private setStrokePreview(tiles: Tile[]) {
 		this.eventEmitter.emit("drawPreview", tiles);
 		this.strokeTiles = tiles.slice();
-		this.strokeSeen.clear();
-		for (const t of this.strokeTiles) this.strokeSeen.add(this.tileKey(t));
 	}
 
 	private startStrokeAt(tile: Tile) {
@@ -154,8 +150,6 @@ class Cursor {
 		this.axisLockArmed = false;
 
 		this.strokeTiles = [tile];
-		this.strokeSeen.clear();
-		this.strokeSeen.add(this.tileKey(tile));
 	}
 
 	private extendStrokeTo(tile: Tile, constraint: PaintConstraint) {

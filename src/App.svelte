@@ -6,7 +6,7 @@
     import Keyboard, { type KeyboardOptions} from './controls/keyboard/Keyboard';
     import Touch from './controls/Touch';
     import Mouse from './controls/Mouse';
-    import Cursor from './controls/Cursor';
+    import Cursor from './controls/cursor/Cursor';
     import GameMap from './GameMap';
     import type { AppMode, MapData, ImageAsset } from './types';
     import { loadJSON } from './utils';
@@ -24,7 +24,7 @@
     const camera = new Camera({ eventEmitter, maxZoomLevel: 4, minZoomLevel: 0.5 });
     const touch = new Touch({ eventEmitter });
     const mouse = new Mouse({ eventEmitter });
-    const cursor = new Cursor({eventEmitter});
+    const cursor = new Cursor({ eventEmitter });
     const gameManager = new GameManager();
     let gameMap: GameMap | null = null;
 
@@ -105,7 +105,7 @@
 
         gameMap = new GameMap({ background: backgroundCanvas, target: mapCanvas, cursorTarget: cursorCanvas, camera, map, imageAssetSet });
 
-        // NOTE - check if touch needs to be attached to cursor canvas
+        // Attach the 
         touch.attach(cursorCanvas);
         mouse.attach(cursorCanvas);
         cursor.attach({ target: cursorCanvas, camera, gameMap: gameMap });
