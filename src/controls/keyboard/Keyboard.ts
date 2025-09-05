@@ -27,7 +27,7 @@ class Keyboard {
 	/*
         Detaches the keyboard event listeners.
 
-        This is useful for whn you unmount a component, 
+        This is useful for when you unmount a component, 
         or when you need to disable keboard bindings because you've
         switched to a different screen in an app or a mode.
     */

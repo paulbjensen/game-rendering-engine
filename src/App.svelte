@@ -3,7 +3,7 @@
     import { fps } from "@sveu/browser"
     import eventEmitter from './eventEmitter';
     import Camera from './Camera';
-    import Keyboard, { type KeyboardOptions} from './controls/Keyboard';
+    import Keyboard, { type KeyboardOptions} from './controls/keyboard/Keyboard';
     import Touch from './controls/Touch';
     import Mouse from './controls/Mouse';
     import Cursor from './controls/Cursor';
