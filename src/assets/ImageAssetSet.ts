@@ -19,6 +19,13 @@ class ImageAssetSet {
 		this.baseTileHeight = baseTileHeight;
 		this.imageAssets = imageAssets;
 		this.loadImages = this.loadImages.bind(this);
+		this.loadImage = this.loadImage.bind(this);
+	}
+
+	loadImage(imageAsset: ImageAsset) {
+		const image = loadImage(imageAsset.imageUrl);
+		const imageAssetIndex = this.imageAssets.indexOf(imageAsset);
+		this.imageAssets[imageAssetIndex] = { ...imageAsset, image };
 	}
 
 	loadImages(imageCodes?: number[]) {
@@ -30,18 +37,10 @@ class ImageAssetSet {
 				if (!imageAsset) {
 					return;
 				}
-				const image = loadImage(imageAsset.imageUrl);
-				const imageAssetIndex = this.imageAssets.indexOf(imageAsset);
-				this.imageAssets[imageAssetIndex] = { ...imageAsset, image };
+				this.loadImage(imageAsset);
 			});
 		} else {
-			this.imageAssets.forEach((imageAsset) => {
-				const image = loadImage(imageAsset.imageUrl);
-				this.imageAssets[this.imageAssets.indexOf(imageAsset)] = {
-					...imageAsset,
-					image,
-				};
-			});
+			this.imageAssets.forEach(this.loadImage);
 		}
 	}
 }
