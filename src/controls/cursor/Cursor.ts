@@ -59,10 +59,6 @@ class Cursor {
 		return previous[0] !== next[0] || previous[1] !== next[1];
 	}
 
-	private tileKey([r, c]: Tile) {
-		return `${r}:${c}`;
-	}
-
 	private rasterizeDiagonal(a: Tile, b: Tile): Tile[] {
 		const out: Tile[] = [];
 
