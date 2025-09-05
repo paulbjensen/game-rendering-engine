@@ -344,8 +344,8 @@ class Cursor {
 
 		// Initial nearest-center guess (removes strong bias)
 		const EPS = 1e-6;
-		let col0 = Math.floor(u + 0.5 - EPS);
-		let row0 = Math.floor(v + 0.5 - EPS);
+		const col0 = Math.floor(u + 0.5 - EPS);
+		const row0 = Math.floor(v + 0.5 - EPS);
 
 		// Candidate neighborhood to de-bias tiny mismatches
 		const candidates: Tile[] = [
