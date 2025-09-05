@@ -231,7 +231,7 @@
         eventEmitter.on('zoomOut', camera.zoomOut);
         eventEmitter.on('zoomIn', camera.zoomIn);
         eventEmitter.on('resetZoom', camera.resetZoom);
-        eventEmitter.on('recenter', camera.resetPan);
+        eventEmitter.on('recenter', camera.resetPanWithSmoothing);
         eventEmitter.on('cameraUpdated', cameraUpdated);
         eventEmitter.on('selectImageAsset', selectImageAsset);
         eventEmitter.on('click', clickOnTile);

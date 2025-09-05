@@ -41,6 +41,7 @@ class Camera {
 		this.zoomOut = this.zoomOut.bind(this);
 		this.resetZoom = this.resetZoom.bind(this);
 		this.resetPan = this.resetPan.bind(this);
+		this.resetPanWithSmoothing = this.resetPanWithSmoothing.bind(this);
 		this.addPan = this.addPan.bind(this);
 		this.setZoom = this.setZoom.bind(this);
 	}
@@ -135,6 +136,36 @@ class Camera {
 			panY: this.panY,
 			zoomLevel: this.zoomLevel,
 		});
+	}
+
+	resetPanWithSmoothing() {
+		const duration = 500; // Duration of the smoothing effect in ms
+		const startX = this.panX;
+		const startY = this.panY;
+		const startTime = performance.now();
+
+		const animate = (currentTime: number) => {
+			const elapsed = currentTime - startTime;
+			const t = Math.min(elapsed / duration, 1); // Normalize t to [0, 1]
+
+			// Apply easing (ease out)
+			const easing = t * (2 - t);
+
+			this.panX = startX * (1 - easing);
+			this.panY = startY * (1 - easing);
+
+			this.eventEmitter.emit("cameraUpdated", {
+				panX: this.panX,
+				panY: this.panY,
+				zoomLevel: this.zoomLevel,
+			});
+
+			if (t < 1) {
+				requestAnimationFrame(animate);
+			}
+		};
+
+		requestAnimationFrame(animate);
 	}
 
 	/*
