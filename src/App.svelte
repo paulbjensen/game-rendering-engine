@@ -43,9 +43,14 @@
 
     function setAppMode (mode: AppMode) {
         if (mode === "navigation") {
+            selectedImageAsset = null;
+            // Mouse
             mouse.mousePanning = true;
             mouse.momentum = true;
-            selectedImageAsset = null;
+            // Cursor
+            cursor.enablePainting = false;
+            // Touch: re-enable gestures
+            touch.setEnabled({ panning: true, pinch: true });
         }
         appMode = mode;
     };
