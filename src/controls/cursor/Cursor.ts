@@ -1,6 +1,7 @@
 import type EventEmitter from "@anephenix/event-emitter";
 import type Camera from "../../Camera";
 import type GameMap from "../../GameMap";
+import inputDetector from "../../inputDetector";
 import type { GridMetrics } from "../../lib/viewport/viewport";
 import {
 	getViewTransform,
@@ -248,8 +249,12 @@ class Cursor {
 		const currentSelectedTile = this.gameMap?.selectedTile;
 		this.calculatePositionOnMap();
 		if (this.hasChanged(currentSelectedTile, this.gameMap?.selectedTile)) {
-			if (this.gameMap?.selectedTile)
+			if (
+				this.gameMap?.selectedTile &&
+				inputDetector.shouldShowMouseSelector()
+			) {
 				this.gameMap?.drawCursorAt(...this.gameMap.selectedTile);
+			}
 		}
 	}
 

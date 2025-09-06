@@ -18,8 +18,8 @@
     import SaveModal from './modals/save/SaveModal.svelte';
     import keyboardOptions from './config/keyboardOptions';
     import FPSCounter from './lib/fpsCounter/FPSCounter.svelte';
-    import { InputDetector } from './lib/inputDetector/InputDetector';
-
+    import inputDetector from './inputDetector';
+    
     // Used to toggle the FPSCounter component via keyboard controls
     let enableFPSCounter = $state(false);
     const toggleFPSCounter = () => enableFPSCounter = !enableFPSCounter;
@@ -28,7 +28,6 @@
     const touch = new Touch({ eventEmitter });
     const mouse = new Mouse({ eventEmitter });
     const cursor = new Cursor({ eventEmitter });
-    const inputDetector = new InputDetector();
 
     const gameManager = new GameManager();
 
@@ -285,6 +284,7 @@
         touch.detach();
         mouse.detach();
         cursor.detach();
+        inputDetector.destroy();
     });
 </script>
 
