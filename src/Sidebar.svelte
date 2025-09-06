@@ -9,6 +9,14 @@
         { title: "Buildings", type: "building" },
         { title: "Random", type: "random" }
     ];
+    
+    function toggleImageAsset(imageAsset: ImageAsset) {
+        return () => {
+            const isSelected = imageAsset.code === selectedImageAsset?.code;
+            const valueToSend = isSelected ? null : imageAsset;
+            eventEmitter.emit('selectImageAsset', valueToSend);
+        };
+    }
 
 </script>
 
@@ -93,10 +101,10 @@
                     {#each imageAssetSet.imageAssets.filter((imageAsset: ImageAsset) => imageAsset.type === section.type) as imageAsset}
                         <button 
                             type="button"
-                            onclick={() => eventEmitter.emit('selectImageAsset', imageAsset.code !== selectedImageAsset?.code ? imageAsset : null)}
+                            onclick={toggleImageAsset(imageAsset)}
                             class={selectedImageAsset?.code === imageAsset.code ? 'selected' : ''}
                         >
-                            <img src={imageAsset.imageUrl} alt={imageAsset.name}/>
+                            <img src={imageAsset.imageUrl} alt={imageAsset.name} />
                         </button>
                     {/each}
                 </div>
