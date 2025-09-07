@@ -58,9 +58,8 @@ class GameMap {
 		this.getMapCoords = this.getMapCoords.bind(this);
 		this.sampleBackground = this.sampleBackground.bind(this);
 		this.rows = map.length;
-		// TODO - check that the map columns are equal for all rows? - Perhaps we want to draw unusual shaped maps in the future - maybe like the inside of a building with curved walls as an example, or game maps that look like levels with rooms?
-		// Actually - we might want to create maps like dungeons as an example - we'd need to be able to do that
-		this.columns = map[0].length;
+		// This will find the maximum number of columns in a row within the map
+		this.columns = Math.max(...map.map((r) => r.length));
 	}
 
 	loadImageAssets() {
