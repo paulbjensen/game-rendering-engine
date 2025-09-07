@@ -1,3 +1,5 @@
+import type EventEmitter from "@anephenix/event-emitter";
+
 type InputCapabilities = {
 	anyFinePointer: boolean; // e.g., mouse/trackpad/stylus
 	anyHover: boolean; // true if something can hover
@@ -12,13 +14,17 @@ export class InputDetector {
 		hasTouch: false,
 		lastPointerType: "unknown",
 	};
+	eventEmitter: InstanceType<typeof EventEmitter>;
 
 	private mqFine = window.matchMedia("(any-pointer: fine)");
 	private mqHover = window.matchMedia("(any-hover: hover)");
 	private onMQFine = () => this.refresh();
 	private onMQHover = () => this.refresh();
 
-	constructor() {
+	constructor({
+		eventEmitter,
+	}: { eventEmitter: InstanceType<typeof EventEmitter> }) {
+		this.eventEmitter = eventEmitter;
 		this.refresh();
 
 		// react to capability changes (e.g., mouse plugged in)
@@ -41,6 +47,7 @@ export class InputDetector {
 		this.caps.anyFinePointer = this.mqFine.matches;
 		this.caps.anyHover = this.mqHover.matches;
 		this.caps.hasTouch = (navigator.maxTouchPoints || 0) > 0;
+		this.eventEmitter.emit("inputCapabilitiesChanged");
 	}
 
 	private onPointer = (ev: PointerEvent) => {
@@ -57,10 +64,14 @@ export class InputDetector {
 	/** Show mouse-style selector iff something can hover AND is fine pointer,
 	 *  or we've recently seen a real mouse.
 	 */
-	shouldShowMouseSelector(): boolean {
+	shouldShowMouseSelector({
+		excludeLastUsedPointer,
+	}: {
+		excludeLastUsedPointer?: boolean;
+	}): boolean {
 		return (
 			(this.caps.anyHover && this.caps.anyFinePointer) ||
-			this.caps.lastPointerType === "mouse"
+			(!excludeLastUsedPointer && this.caps.lastPointerType === "mouse")
 		);
 	}
 }

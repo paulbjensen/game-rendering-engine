@@ -251,7 +251,7 @@ class Cursor {
 		if (this.hasChanged(currentSelectedTile, this.gameMap?.selectedTile)) {
 			if (
 				this.gameMap?.selectedTile &&
-				inputDetector.shouldShowMouseSelector()
+				inputDetector.shouldShowMouseSelector({})
 			) {
 				this.gameMap?.drawCursorAt(...this.gameMap.selectedTile);
 			}

@@ -57,6 +57,7 @@ class GameMap {
 		this.load = this.load.bind(this);
 		this.getMapCoords = this.getMapCoords.bind(this);
 		this.sampleBackground = this.sampleBackground.bind(this);
+		this.clearCursor = this.clearCursor.bind(this);
 		this.rows = map.length;
 		// This will find the maximum number of columns in a row within the map
 		this.columns = Math.max(...map.map((r) => r.length));
@@ -161,6 +162,13 @@ class GameMap {
 		ctx.closePath();
 		ctx.stroke();
 		ctx.restore();
+	}
+
+	clearCursor() {
+		const ctx = this.cursorTarget.getContext("2d");
+		if (!ctx) return;
+		ctx.setTransform(1, 0, 0, 1, 0, 0);
+		ctx.clearRect(0, 0, this.cursorTarget.width, this.cursorTarget.height);
 	}
 
 	drawPreview(tiles: [number, number][]) {

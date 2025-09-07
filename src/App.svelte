@@ -172,7 +172,7 @@
             if (
                 gameMap.selectedTile
             ) {
-                if (inputDetector.shouldShowMouseSelector()) {
+                if (inputDetector.shouldShowMouseSelector({})) {
                     gameMap.drawCursorAt(...gameMap.selectedTile);
                 }
             }
@@ -270,6 +270,18 @@
         });
         eventEmitter.on('showSaveModal', () => {
             showSaveModal = true;
+        });
+
+        /*
+            If we attach/detach the iPad Pro from a magic keyboard, 
+            we want to show/hide the cursor.
+        */
+        eventEmitter.on("inputCapabilitiesChanged", () => {
+            if (inputDetector.shouldShowMouseSelector({excludeLastUsedPointer: true}) && gameMap?.selectedTile) {
+                gameMap?.drawCursorAt(...(gameMap.selectedTile));
+            } else {
+                gameMap?.clearCursor();
+            }
         });
 
         // Load map assets then resize the canvas once loaded
