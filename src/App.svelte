@@ -235,7 +235,7 @@
                 gameMap.drawBackground();
                 gameMap.draw();
             }
-        } 
+        }
 
         // Deletes a game
         function deleteGame (name:string) {
@@ -243,6 +243,26 @@
                 gameManager.delete(name);
                 alert('Game deleted!');
             }
+        }
+
+        /*
+            If we attach/detach the iPad Pro from a magic keyboard, 
+            we want to show/hide the cursor.
+        */
+        function showOrHideCursor() {
+            if (inputDetector.shouldShowMouseSelector({excludeLastUsedPointer: true}) && gameMap?.selectedTile) {
+                gameMap?.drawCursorAt(...(gameMap.selectedTile));
+            } else {
+                gameMap?.clearCursor();
+            }
+        }
+
+        function showTheLoadModal() {
+            showLoadModal = true;
+        }
+
+        function showTheSaveModal() {
+            showSaveModal = true;
         }
 
         // EventEmitter bindings
@@ -265,24 +285,9 @@
         eventEmitter.on('loadGame', loadGame);
         eventEmitter.on('deleteGame', deleteGame);
         eventEmitter.on('toggleFPSCounter', toggleFPSCounter);
-        eventEmitter.on('showLoadModal', () => {
-            showLoadModal = true;
-        });
-        eventEmitter.on('showSaveModal', () => {
-            showSaveModal = true;
-        });
-
-        /*
-            If we attach/detach the iPad Pro from a magic keyboard, 
-            we want to show/hide the cursor.
-        */
-        eventEmitter.on("inputCapabilitiesChanged", () => {
-            if (inputDetector.shouldShowMouseSelector({excludeLastUsedPointer: true}) && gameMap?.selectedTile) {
-                gameMap?.drawCursorAt(...(gameMap.selectedTile));
-            } else {
-                gameMap?.clearCursor();
-            }
-        });
+        eventEmitter.on('showLoadModal', showTheLoadModal);
+        eventEmitter.on('showSaveModal', showTheSaveModal);
+        eventEmitter.on("inputCapabilitiesChanged", showOrHideCursor);
 
         // Load map assets then resize the canvas once loaded
         await gameMap?.load();
