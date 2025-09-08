@@ -12,6 +12,17 @@
         currentScreen = screen;
     }
 
+    const keyboardControlsList = [
+        { key: '&uparrow;', action: 'Up'},
+        { key: '&downarrow;', action: 'Down'},
+        { key: '&leftarrow;', action: 'Left'},
+        { key: '&rightarrow;', action: 'Right'},
+        { key: '+', action: 'Zoom In'},
+        { key: '-', action: 'Zoom Out'},
+        { key: '0', action: 'Reset Zoom'},
+        { key: 'C', action: 'Recenter'},
+    ];
+
 </script>
 
 <style>
@@ -158,38 +169,12 @@
                     <h2>
                         Keyboard
                     </h2>
-                    <div class="keyboard-control">
-                        <div class="key">&uparrow;</div>
-                        <div class="action">Move Up</div>
-                    </div>
-                    <div class="keyboard-control">
-                        <div class="key">&downarrow;</div>
-                        <div class="action">Move Down</div>
-                    </div>
-                    <div class="keyboard-control">
-                        <div class="key">&leftarrow;</div>
-                        <div class="action">Move Left</div>
-                    </div>
-                    <div class="keyboard-control">
-                        <div class="key">&rightarrow;</div>
-                        <div class="action">Move Right</div>
-                    </div>
-                    <div class="keyboard-control">
-                        <div class="key">+</div>
-                        <div class="action">Zoom In</div>
-                    </div>
-                    <div class="keyboard-control">
-                        <div class="key">-</div>
-                        <div class="action">Zoom Out</div>
-                    </div>
-                    <div class="keyboard-control">
-                        <div class="key">0</div>
-                        <div class="action">Reset Zoom</div>
-                    </div>
-                    <div class="keyboard-control">
-                        <div class="key">C</div>
-                        <div class="action">Recenter</div>
-                    </div>
+                    {#each keyboardControlsList as control}
+                        <div class="keyboard-control">
+                            <div class="key">{@html control.key}</div>
+                            <div class="action">{control.action}</div>
+                        </div>
+                    {/each}
                 </div>
                 <div id="mouse-controls">
                     <h2>
