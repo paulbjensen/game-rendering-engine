@@ -46,7 +46,6 @@
         background: rgba(255, 255, 255, 0.1);
     }
 
-
     .map-item {
         display: grid;
         grid-template-columns: 1fr 20px;

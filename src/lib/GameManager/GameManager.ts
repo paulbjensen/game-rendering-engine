@@ -1,8 +1,8 @@
-import type { MapData } from "../../types";
+import type { MapData, MapDataV2 } from "../../types";
 
 type Game = {
 	name: string;
-	data: MapData;
+	data: MapData | MapDataV2;
 };
 
 class GameManager {
@@ -32,7 +32,7 @@ class GameManager {
 		throw new Error("Game not found");
 	}
 
-	save(name: string, data: MapData) {
+	save(name: string, data: MapData | MapDataV2) {
 		const game = this.games.find((g) => g.name === name);
 		if (game) {
 			Object.assign(game, { data });

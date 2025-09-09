@@ -16,7 +16,8 @@ class GameMap {
 	target: HTMLCanvasElement;
 	cursorTarget: HTMLCanvasElement;
 	camera: Camera;
-	map: MapData;
+	ground: MapData;
+	entities: unknown[];
 	rows: number;
 	columns: number;
 	selectedTile: [number, number] | null = null;
@@ -35,21 +36,24 @@ class GameMap {
 		target,
 		cursorTarget,
 		camera,
-		map,
+		ground,
+		entities,
 		imageAssetSet,
 	}: {
 		background: HTMLCanvasElement;
 		target: HTMLCanvasElement;
 		cursorTarget: HTMLCanvasElement;
 		camera: Camera;
-		map: MapData;
+		ground: MapData;
+		entities: unknown[];
 		imageAssetSet: ImageAssetSet;
 	}) {
 		this.background = background;
 		this.target = target;
 		this.cursorTarget = cursorTarget;
 		this.camera = camera;
-		this.map = map;
+		this.ground = ground;
+		this.entities = entities;
 		this.imageAssetSet = imageAssetSet;
 		this.draw = this.draw.bind(this);
 		this.loadImageAssets = this.loadImageAssets.bind(this);
@@ -58,16 +62,16 @@ class GameMap {
 		this.getMapCoords = this.getMapCoords.bind(this);
 		this.sampleBackground = this.sampleBackground.bind(this);
 		this.clearCursor = this.clearCursor.bind(this);
-		this.rows = map.length;
-		// This will find the maximum number of columns in a row within the map
-		this.columns = Math.max(...map.map((r) => r.length));
+		this.rows = this.ground.length;
+		// This will find the maximum number of columns in a row within the ground
+		this.columns = Math.max(...this.ground.map((r) => r.length));
 	}
 
 	loadImageAssets() {
 		const loadOnlyMapAssets = false;
 		if (loadOnlyMapAssets) {
 			const imageCodes = new Set<number>();
-			for (const row of this.map) {
+			for (const row of this.ground) {
 				for (const column of row) {
 					for (const tile of Array.isArray(column) ? column : [column]) {
 						imageCodes.add(tile);
@@ -98,9 +102,9 @@ class GameMap {
 		await delayUntil(() => this.hasLoaded());
 	}
 
-	// Updates the map using the structuredClone
-	updateMap(map: MapData) {
-		this.map = structuredClone(map);
+	// Updates the ground using the structuredClone
+	updateGround(ground: MapData) {
+		this.ground = structuredClone(ground);
 	}
 
 	getMapCoords() {
@@ -289,7 +293,7 @@ class GameMap {
 
 		for (let r = 0; r < this.rows; r++) {
 			for (let c = 0; c < this.columns; c++) {
-				const codes = this.map[r][c];
+				const codes = this.ground[r][c];
 				const drawOne = (code: number) => {
 					const tile = this.imageAssetSet.imageAssets.find(
 						(t) => t.code === code,

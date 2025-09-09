@@ -7,7 +7,7 @@
     import Mouse from './controls/Mouse';
     import Cursor from './controls/cursor/Cursor';
     import GameMap from './GameMap';
-    import type { AppMode, MapData, ImageAsset } from './types';
+    import type { AppMode, MapDataV2, ImageAsset } from './types';
     import { loadJSON } from './utils';
 	import ImageAssetSet from './assets/ImageAssetSet';
     import Sidebar from './Sidebar.svelte';
@@ -63,9 +63,24 @@
     const keyboard = new Keyboard(keyboardOptions);
     keyboard.attach();
 
+    const loadMapData = async (url: string): Promise<MapDataV2> => {
+        const data = await loadJSON(url);
+        if (!data) {
+            throw new Error(`Failed to load map data from ${url}`);
+        }
+        const isVersionOne = Array.isArray(data);
+        if (isVersionOne) {
+            return { ground: data, version: 2, entities: [] };
+        } else {
+            return data;
+        }
+
+    };
+
     onMount(async () => {
 
-        const map: MapData = await loadJSON('/maps/128x128.json');
+        const { ground, entities } = await loadMapData('/maps/128x128.json');
+
         const imageAssets = await loadJSON('/imageAssetSets/1.json');
 
         imageAssetSet = new ImageAssetSet({
@@ -88,12 +103,12 @@
             throw new Error('Canvas element for map or cursor not found');
         }
 
-        gameMap = new GameMap({ background: backgroundCanvas, target: mapCanvas, cursorTarget: cursorCanvas, camera, map, imageAssetSet });
+        gameMap = new GameMap({ background: backgroundCanvas, target: mapCanvas, cursorTarget: cursorCanvas, camera, ground, entities, imageAssetSet });
 
         // Attach the 
         touch.attach(cursorCanvas);
         mouse.attach(cursorCanvas);
-        cursor.attach({ target: cursorCanvas, camera, gameMap: gameMap });
+        cursor.attach({ target: cursorCanvas, camera, gameMap });
 
         /* Resizes the canvas elements so that they always fit within the window */
         function resizeCanvases() {
@@ -182,9 +197,9 @@
         function clickOnTile (tile: [number, number] | null) {
             if (tile && selectedImageAsset && gameMap) {
                 if (Array.isArray(tile)) {
-                    gameMap.map[tile[0]][tile[1]] = [0, selectedImageAsset.code];
+                    gameMap.ground[tile[0]][tile[1]] = [0, selectedImageAsset.code];
                 } else {
-                    gameMap.map[tile] = [0, selectedImageAsset.code];
+                    gameMap.ground[tile] = [0, selectedImageAsset.code];
                 }
                 gameMap.drawBackground();
                 gameMap.draw();
@@ -196,7 +211,7 @@
             if (tiles.length === 0) return;
             if (selectedImageAsset && gameMap) {
                 for (const tile of tiles) {
-                    gameMap.map[tile[0]][tile[1]] = [0, selectedImageAsset.code];
+                    gameMap.ground[tile[0]][tile[1]] = [0, selectedImageAsset.code];
                 }
                 gameMap.drawBackground();
                 gameMap.draw();
@@ -220,7 +235,12 @@
         function saveGame (name:string) {
             if (gameMap) {
                 gameName = name;
-                gameManager.save(name, gameMap.map);
+                const gameData = {
+                    version: 2,
+                    ground: gameMap.ground,
+                    entities: gameMap.entities
+                };
+                gameManager.save(name, gameData);
                 alert('Game saved!');
             }
         }
@@ -231,7 +251,11 @@
             gameName = name;
             const game = gameManager.load(name);
             if (game && gameMap) {
-                gameMap.updateMap(game.data);
+                if (Array.isArray(game.data)) {
+                    gameMap.updateGround(game.data);
+                } else {
+                    gameMap.updateGround(game.data.ground);
+                }                
                 gameMap.drawBackground();
                 gameMap.draw();
             }
