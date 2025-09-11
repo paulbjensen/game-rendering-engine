@@ -29,6 +29,7 @@ class Mouse {
 	dragDistance: number = 0;
 	mousePanning: boolean = true;
 	momentum: boolean = true;
+	edgeThreshold: number = 10; // pixels from edge to trigger panning via the scrollScreen function
 
 	constructor({ target, eventEmitter }: MouseOptions) {
 		if (target) this.target = target;
@@ -105,32 +106,31 @@ class Mouse {
 
 	/* This will scroll in the direction of the screen as edges */
 	scrollScreen(event: MouseEvent) {
-		const edgeThreshold = 30; // pixels from edge to trigger panning
 		const rect = this.target?.getBoundingClientRect();
 		if (!rect) return;
 
 		const mouseX = event.clientX - rect.left;
 		const mouseY = event.clientY - rect.top;
 
-		if (mouseX < edgeThreshold) {
+		if (mouseX < this.edgeThreshold) {
 			// Check left/right edges
 			this.eventEmitter.emit("startPanning", "left");
 		} else {
 			this.eventEmitter.emit("stopPanning", "left");
 		}
-		if (mouseX > rect.width - edgeThreshold) {
+		if (mouseX > rect.width - this.edgeThreshold) {
 			this.eventEmitter.emit("startPanning", "right");
 		} else {
 			this.eventEmitter.emit("stopPanning", "right");
 		}
 
-		if (mouseY < edgeThreshold) {
+		if (mouseY < this.edgeThreshold) {
 			// Check top/bottom edges
 			this.eventEmitter.emit("startPanning", "up");
 		} else {
 			this.eventEmitter.emit("stopPanning", "up");
 		}
-		if (mouseY > rect.height - edgeThreshold) {
+		if (mouseY > rect.height - this.edgeThreshold) {
 			this.eventEmitter.emit("startPanning", "down");
 		} else {
 			this.eventEmitter.emit("stopPanning", "down");
