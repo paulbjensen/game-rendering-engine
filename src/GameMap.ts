@@ -8,7 +8,7 @@ import {
 	snapped,
 	worldToScreen,
 } from "./lib/viewport/viewport";
-import type { Entity, MapData } from "./types";
+import type { Entity, ImageAsset, MapData } from "./types";
 import { delayUntil, imageHasLoaded } from "./utils";
 
 class GameMap {
@@ -105,8 +105,14 @@ class GameMap {
 	// Updates the ground using the structuredClone
 	updateGround(ground: MapData) {
 		this.ground = structuredClone(ground);
+		// We need to set the rows and columns from the ground map
 		this.rows = ground.length;
 		this.columns = Math.max(...ground.map((r) => r.length));
+	}
+
+	// Updates the entities
+	updateEntities(entities: Entity[]) {
+		this.entities = structuredClone(entities);
 	}
 
 	getMapCoords() {
@@ -361,6 +367,27 @@ class GameMap {
 		// Store for reuse
 		this._bounds = bounds;
 		this._metrics = metrics;
+	}
+
+	addEntity({
+		position,
+		imageAsset,
+	}: {
+		position: [number, number];
+		imageAsset: ImageAsset;
+	}) {
+		const entity: Entity = {
+			id: crypto.randomUUID(),
+			anchor: position,
+			code: imageAsset.code,
+			size: imageAsset.size,
+			orientation: "se",
+			elevation: 0,
+			offsetPx: [0, 0],
+			metadata: {},
+		};
+
+		this.entities.push(entity);
 	}
 }
 export default GameMap;

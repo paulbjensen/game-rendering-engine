@@ -14,17 +14,21 @@ export type MapData = MapTile[][];
 */
 export type PaintConstraint = "diagonal" | "axial" | "area" | "single";
 
-export type ImageAssetType = "terrain" | "road" | "building" | "random";
+export type ImageAssetType = "ground" | "entity";
+
+export type ImageAssetSubType = "terrain" | "road" | "building" | "random";
 
 export type ImageAsset = {
 	code: number;
 	name: string;
 	type: ImageAssetType;
+	subType: ImageAssetSubType;
 	paintConstraint: PaintConstraint;
 	imageUrl: string;
 	image: HTMLImageElement | null;
 	width: number;
 	height: number;
+	size: [number, number];
 };
 
 export type Entity = {

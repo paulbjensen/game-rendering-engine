@@ -74,15 +74,18 @@
         } else {
             return data;
         }
-
     };
 
     onMount(async () => {
 
-        const { ground, entities } = await loadMapData('/maps/128x128.json');
-
+        const { ground, entities } = await loadMapData('/maps/32x32.json');
         const imageAssets = await loadJSON('/imageAssetSets/1.json');
 
+        /*
+            NOTE - when we start to load games, they may use different asset 
+            sets, so we need to design the code to be able to change image 
+            asset sets if required.
+        */
         imageAssetSet = new ImageAssetSet({
             imageAssets,
             baseTileWidth: 64,
@@ -196,10 +199,15 @@
         // This is triggered when the user clicks on a tile
         function clickOnTile (tile: [number, number] | null) {
             if (tile && selectedImageAsset && gameMap) {
-                if (Array.isArray(tile)) {
-                    gameMap.ground[tile[0]][tile[1]] = [0, selectedImageAsset.code];
+                // NOTE - change this so that it looks at the tile type (ground or entity)
+                if (selectedImageAsset?.type === 'ground') {
+                    if (Array.isArray(tile)) {
+                        gameMap.ground[tile[0]][tile[1]] = [0, selectedImageAsset.code];
+                    } else {
+                        gameMap.ground[tile] = [0, selectedImageAsset.code];
+                    }
                 } else {
-                    gameMap.ground[tile] = [0, selectedImageAsset.code];
+                    gameMap.addEntity({ position: tile, imageAsset: selectedImageAsset });
                 }
                 gameMap.drawBackground();
                 gameMap.draw();
@@ -253,9 +261,12 @@
             if (game && gameMap) {
                 if (Array.isArray(game.data)) {
                     gameMap.updateGround(game.data);
+                    gameMap.updateEntities([]);
                 } else {
+                    // TODO - update entities
                     gameMap.updateGround(game.data.ground);
-                }                
+                    gameMap.updateEntities(game.data.entities);
+                }
                 gameMap.drawBackground();
                 gameMap.draw();
             }

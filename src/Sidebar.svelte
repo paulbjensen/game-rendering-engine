@@ -4,10 +4,10 @@
     const { imageAssetSet, eventEmitter, selectedImageAsset, hidden } = $props();
 
     const sections = [
-        { title: "Terrain", type: "terrain" },
-        { title: "Roads", type: "road" },
-        { title: "Buildings", type: "building" },
-        { title: "Random", type: "random" }
+        { title: "Terrain", subType: "terrain" },
+        { title: "Roads", subType: "road" },
+        { title: "Buildings", subType: "building" },
+        { title: "Random", subType: "random" }
     ];
     
     function toggleImageAsset(imageAsset: ImageAsset) {
@@ -18,6 +18,12 @@
         };
     }
 
+    // Filters assets by section
+    function filterBySection (section: { title: string; subType: string }) {
+        return (imageAsset: ImageAsset) => {
+            return imageAsset.subType === section.subType;
+        }
+    }
 </script>
 
 <style>
@@ -98,7 +104,7 @@
             <div class="section">
                 <div class="section-title">{section.title}</div>
                 <div class="section-content">
-                    {#each imageAssetSet.imageAssets.filter((imageAsset: ImageAsset) => imageAsset.type === section.type) as imageAsset}
+                    {#each imageAssetSet.imageAssets.filter(filterBySection(section)) as imageAsset}
                         <button 
                             type="button"
                             onclick={toggleImageAsset(imageAsset)}
