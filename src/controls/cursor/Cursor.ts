@@ -8,7 +8,7 @@ import {
 	mouseToCanvasPx,
 	pickTileAtScreenPoint,
 } from "../../lib/viewport/viewport";
-import type { PaintConstraint } from "../../types";
+import type { ImageAsset, PaintConstraint } from "../../types";
 
 type Tile = [row: number, col: number];
 type AxisLock = "row" | "col" | null;
@@ -21,6 +21,7 @@ class Cursor {
 	camera?: Camera | null;
 	eventEmitter: InstanceType<typeof EventEmitter>;
 	enablePainting: boolean = false;
+	selectedImageAsset: ImageAsset | null = null;
 
 	// painting state
 	private isPainting = false;
@@ -253,7 +254,10 @@ class Cursor {
 				this.gameMap?.selectedTile &&
 				inputDetector.shouldShowMouseSelector({})
 			) {
-				this.gameMap?.drawCursorAt(...this.gameMap.selectedTile);
+				this.gameMap?.drawCursorAt(
+					...this.gameMap.selectedTile,
+					this.selectedImageAsset,
+				);
 			}
 		}
 	}

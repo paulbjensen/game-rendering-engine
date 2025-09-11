@@ -45,7 +45,8 @@
 
     function setAppMode (mode: AppMode) {
         if (mode === "navigation") {
-            selectedImageAsset = null;
+            // TODO - find better way to manage this state in the future
+            cursor.selectedImageAsset = selectedImageAsset = null;
             // Mouse
             mouse.mousePanning = true;
             mouse.momentum = true;
@@ -166,7 +167,7 @@
                 touch.setEnabled({ panning: true, pinch: true });
             }
 
-            selectedImageAsset = imageAsset;
+            cursor.selectedImageAsset = selectedImageAsset = imageAsset;
         }
 
         /* 
@@ -191,7 +192,7 @@
                 gameMap.selectedTile
             ) {
                 if (inputDetector.shouldShowMouseSelector({})) {
-                    gameMap.drawCursorAt(...gameMap.selectedTile);
+                    gameMap.drawCursorAt(...gameMap.selectedTile, selectedImageAsset);
                 }
             }
         }
@@ -286,7 +287,7 @@
         */
         function showOrHideCursor() {
             if (inputDetector.shouldShowMouseSelector({excludeLastUsedPointer: true}) && gameMap?.selectedTile) {
-                gameMap?.drawCursorAt(...(gameMap.selectedTile));
+                gameMap?.drawCursorAt(...(gameMap.selectedTile), selectedImageAsset);
             } else {
                 gameMap?.clearCursor();
             }

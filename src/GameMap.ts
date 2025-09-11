@@ -132,7 +132,11 @@ class GameMap {
 		return { mapX, mapY };
 	}
 
-	drawCursorAt(row: number, col: number) {
+	drawCursorAt(
+		row: number,
+		col: number,
+		imageAsset?: ImageAsset | null | undefined,
+	) {
 		const ctx = this.cursorTarget.getContext("2d");
 		if (!ctx) return;
 
@@ -149,12 +153,26 @@ class GameMap {
 
 		if (!this._metrics || !this._bounds) return;
 
-		const { wx, wy } = rcToWorldTopLeft(row, col, this._metrics, this._bounds);
-		const { x, y } = worldToScreen(wx, wy, tfSnap);
+		// === Decide footprint size (in tiles) ===
+		// Default to 1x1 if no asset.
+		const rTiles = imageAsset?.size?.[0] ?? 1; // rows (north-south)
+		const cTiles = imageAsset?.size?.[1] ?? 1; // cols (west-east)
 
-		const W = this._metrics.W,
-			H = this._metrics.H;
+		// If your anchor is NOT the top-left of the footprint,
+		// adjust these offsets. For top-left, both are 0.
+		let anchorRowOffset = 0;
+		let anchorColOffset = 0;
 
+		// Example: if your anchor should be the bottom-center tile of the footprint:
+		anchorRowOffset = -(rTiles - 1); // shift footprint up by (rows-1)
+		anchorColOffset = -Math.floor(cTiles / 2); // center horizontally
+
+		const startRow = row + anchorRowOffset;
+		const startCol = col + anchorColOffset;
+
+		const { W, H } = this._metrics;
+
+		// Prepare canvas
 		ctx.setTransform(1, 0, 0, 1, 0, 0);
 		ctx.clearRect(0, 0, this.cursorTarget.width, this.cursorTarget.height);
 		ctx.imageSmoothingEnabled = false;
@@ -166,13 +184,65 @@ class GameMap {
 		const tW = W * this.camera.zoomLevel;
 		const tH = H * this.camera.zoomLevel;
 
+		// Helper: unique key for an undirected edge between two points
+		// We quantize to reduce float-key issues.
+		const q = (n: number) => Math.round(n * 1000) / 1000; // 0.001px precision
+		const edgeKey = (ax: number, ay: number, bx: number, by: number) => {
+			const a = `${q(ax)},${q(ay)}`;
+			const b = `${q(bx)},${q(by)}`;
+			return a < b ? `${a}|${b}` : `${b}|${a}`;
+		};
+
+		// Store edges that belong to the final perimeter:
+		// If an edge appears twice (shared by adjacent tiles), remove it.
+		const perimeter = new Map<
+			string,
+			{ ax: number; ay: number; bx: number; by: number }
+		>();
+
+		// Helper: add (toggle) an edge
+		const addEdge = (ax: number, ay: number, bx: number, by: number) => {
+			const key = edgeKey(ax, ay, bx, by);
+			if (perimeter.has(key)) {
+				perimeter.delete(key); // Internal edge — cancel out
+			} else {
+				perimeter.set(key, { ax, ay, bx, by });
+			}
+		};
+
+		// Walk each tile in the footprint and add its 4 edges
+		for (let dr = 0; dr < rTiles; dr++) {
+			for (let dc = 0; dc < cTiles; dc++) {
+				const r = startRow + dr;
+				const c = startCol + dc;
+
+				// Tile's world top-left + project to screen (top-left of the diamond)
+				const { wx, wy } = rcToWorldTopLeft(r, c, this._metrics, this._bounds);
+				const { x, y } = worldToScreen(wx, wy, tfSnap);
+
+				// Diamond vertices in screen space
+				const top = { x: x + tW / 2, y: y };
+				const right = { x: x + tW, y: y + tH / 2 };
+				const bottom = { x: x + tW / 2, y: y + tH };
+				const left = { x: x, y: y + tH / 2 };
+
+				// Add edges (undirected). Interior edges will cancel.
+				addEdge(top.x, top.y, right.x, right.y);
+				addEdge(right.x, right.y, bottom.x, bottom.y);
+				addEdge(bottom.x, bottom.y, left.x, left.y);
+				addEdge(left.x, left.y, top.x, top.y);
+			}
+		}
+
+		// Draw the resulting perimeter
+		// We can render each edge individually to avoid needing to sort them into a loop.
 		ctx.beginPath();
-		ctx.moveTo(x + tW / 2, y);
-		ctx.lineTo(x + tW, y + tH / 2);
-		ctx.lineTo(x + tW / 2, y + tH);
-		ctx.lineTo(x, y + tH / 2);
-		ctx.closePath();
+		for (const { ax, ay, bx, by } of perimeter.values()) {
+			ctx.moveTo(ax, ay);
+			ctx.lineTo(bx, by);
+		}
 		ctx.stroke();
+
 		ctx.restore();
 	}
 
