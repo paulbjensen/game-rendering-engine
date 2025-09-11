@@ -138,11 +138,19 @@ class Mouse {
 	}
 
 	onMouseMove(event: MouseEvent) {
-		if (!this.mousePanning) {
-			this.scrollScreen(event);
-		} else {
+		/*
+			We allow for click-and-drag-based panning unless the user is trying
+			to apply tiles to the map, as it will clash with being able to 
+			perform that action.
+		*/
+		if (this.mousePanning) {
 			this.adjustCameraPan(event);
 		}
+		/*
+			This performs screen scrolling when the mouse is near the edges of 
+			the screen
+		*/
+		this.scrollScreen(event);
 	}
 
 	/*

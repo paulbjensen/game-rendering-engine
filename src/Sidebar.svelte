@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { ImageAsset } from './types';
 
-    const { imageAssetSet, eventEmitter, selectedImageAsset, hidden} = $props();
+    const { imageAssetSet, eventEmitter, selectedImageAsset, hidden } = $props();
 
     const sections = [
         { title: "Terrain", type: "terrain" },
