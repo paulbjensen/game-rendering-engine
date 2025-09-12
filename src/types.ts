@@ -29,6 +29,7 @@ export type ImageAsset = {
 	width: number;
 	height: number;
 	size: [number, number];
+	anchor: [number, number];
 };
 
 export type Entity = {

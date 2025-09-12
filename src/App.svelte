@@ -197,32 +197,33 @@
             }
         }
 
-        // This is triggered when the user clicks on a tile
-        function clickOnTile (tile: [number, number] | null) {
-            if (tile && selectedImageAsset && gameMap) {
-                // NOTE - change this so that it looks at the tile type (ground or entity)
-                gameMap.clearEntitiesInArea([...tile, ...tile]);
-                if (selectedImageAsset?.type === 'ground') {
-                    if (Array.isArray(tile)) {
-                        gameMap.ground[tile[0]][tile[1]] = [0, selectedImageAsset.code];
-                    } else {
-                        gameMap.ground[tile] = [0, selectedImageAsset.code];
-                    }
-                } else {
-                    gameMap.addEntity({ position: tile, imageAsset: selectedImageAsset });
-                }
-                gameMap.drawBackground();
-                gameMap.draw();
-            }
-        }
-
         // This is triggered when the user clicks on a set of tiles
         function clickOnTiles (tiles: [number, number][]) {
             if (tiles.length === 0) return;
             if (selectedImageAsset && gameMap) {
                 gameMap.clearEntitiesInArea([...tiles[0], ...tiles[tiles.length - 1]]);
+                const rows = tiles.map(t => t[0]);
+                const columns = tiles.map(t => t[1]);
+                const minRow = Math.min(...rows);
+                const maxRow = Math.max(...rows);
+                const minCol = Math.min(...columns);
+                const maxCol = Math.max(...columns);
+
+                const topLeftTile:[number, number] = [minRow, minCol];
+                const topRightTile:[number, number] = [minRow, maxCol];
+                const bottomLeftTile:[number, number] = [maxRow, minCol];
+                const bottomRightTile:[number, number] = [maxRow, maxCol];
+                const tilesToCheck = [topLeftTile, topRightTile, bottomLeftTile, bottomRightTile];
+                for (const tileToCheck of tilesToCheck) {
+                    if (!gameMap.fitsOnMap({ position: tileToCheck, imageAsset: selectedImageAsset })) return;
+                }
+
                 for (const tile of tiles) {
-                    gameMap.ground[tile[0]][tile[1]] = [0, selectedImageAsset.code];
+                    if (selectedImageAsset?.type === 'ground') {
+                        gameMap.ground[tile[0]][tile[1]] = [0, selectedImageAsset.code];
+                    } else {
+                        gameMap.addEntity({ position: tile, imageAsset: selectedImageAsset });
+                    }
                 }
                 gameMap.drawBackground();
                 gameMap.draw();
@@ -314,7 +315,6 @@
         eventEmitter.on('recenter', camera.resetPanWithSmoothing);
         eventEmitter.on('cameraUpdated', cameraUpdated);
         eventEmitter.on('selectImageAsset', selectImageAsset);
-        eventEmitter.on('click', clickOnTile);
         eventEmitter.on('clickBatch', clickOnTiles);
         eventEmitter.on('drawPreview', drawPreview);
         eventEmitter.on('clearPreview', clearPreview);

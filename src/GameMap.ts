@@ -1,3 +1,4 @@
+import { image } from "@sveu/browser";
 import type ImageAssetSet from "./assets/ImageAssetSet";
 import type Camera from "./Camera";
 import {
@@ -63,6 +64,7 @@ class GameMap {
 		this.sampleBackground = this.sampleBackground.bind(this);
 		this.clearCursor = this.clearCursor.bind(this);
 		this.clearEntitiesInArea = this.clearEntitiesInArea.bind(this);
+		this.fitsOnMap = this.fitsOnMap.bind(this);
 		this.rows = this.ground.length;
 		// This will find the maximum number of columns in a row within the ground
 		this.columns = Math.max(...this.ground.map((r) => r.length));
@@ -416,6 +418,25 @@ class GameMap {
 		// Store for reuse
 		this._bounds = bounds;
 		this._metrics = metrics;
+	}
+
+	fitsOnMap({
+		position,
+		imageAsset,
+	}: {
+		position: [number, number];
+		imageAsset: ImageAsset;
+	}) {
+		const [row, column] = position;
+
+		console.log({ position, imageAsset });
+		// TODO - add anchor to imageAsset
+
+		const withinMapRowRange =
+			row - (imageAsset.size[0] - 1 + (imageAsset.anchor[0] - 1)) >= 0;
+		const withinMapColumnRange =
+			column - (imageAsset.size[1] - 1 + (imageAsset.anchor[1] - 1)) >= 0;
+		return withinMapRowRange && withinMapColumnRange;
 	}
 
 	addEntity({
