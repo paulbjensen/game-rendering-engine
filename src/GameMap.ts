@@ -338,9 +338,9 @@ class GameMap {
 		// 	...this.imageAssetSet.imageAssets.map((a) => a.width ?? W),
 		// );
 		// NOTE - Commented out to fix a performance regression on iOS devices
-		const Hmax = H; //Math.max(
-		// 	...this.imageAssetSet.imageAssets.map((a) => a.height ?? H),
-		// );
+		const Hmax = Math.max(
+			...this.imageAssetSet.imageAssets.map((a) => a.height ?? H),
+		);
 
 		const metrics = { W, H, Wmax, Hmax, rows: this.rows, cols: this.columns };
 		const bounds = measureMapBounds(metrics);
