@@ -62,6 +62,7 @@ class GameMap {
 		this.getMapCoords = this.getMapCoords.bind(this);
 		this.sampleBackground = this.sampleBackground.bind(this);
 		this.clearCursor = this.clearCursor.bind(this);
+		this.clearEntitiesInArea = this.clearEntitiesInArea.bind(this);
 		this.rows = this.ground.length;
 		// This will find the maximum number of columns in a row within the ground
 		this.columns = Math.max(...this.ground.map((r) => r.length));
@@ -153,26 +154,22 @@ class GameMap {
 
 		if (!this._metrics || !this._bounds) return;
 
-		// === Decide footprint size (in tiles) ===
-		// Default to 1x1 if no asset.
-		const rTiles = imageAsset?.size?.[0] ?? 1; // rows (north-south)
-		const cTiles = imageAsset?.size?.[1] ?? 1; // cols (west-east)
-
-		// If your anchor is NOT the top-left of the footprint,
-		// adjust these offsets. For top-left, both are 0.
-		let anchorRowOffset = 0;
-		let anchorColOffset = 0;
-
-		// Example: if your anchor should be the bottom-center tile of the footprint:
-		anchorRowOffset = -(rTiles - 1); // shift footprint up by (rows-1)
-		anchorColOffset = -Math.floor(cTiles / 2); // center horizontally
-
-		const startRow = row + anchorRowOffset;
-		const startCol = col + anchorColOffset;
-
 		const { W, H } = this._metrics;
 
-		// Prepare canvas
+		// Footprint in tiles (rows x cols)
+		const rTiles = imageAsset?.size?.[0] ?? 1;
+		const cTiles = imageAsset?.size?.[1] ?? 1;
+
+		// ---- Anchor: bottom-center of the footprint ----
+		// (row,col) is the tile under the mouse cursor, i.e. the anchor.
+		// Shift the rectangle so that its bottom-center lands on (row,col).
+		const anchorRowOffset = -(rTiles - 1); // shift up by (rows-1)
+		const anchorColOffset = -Math.floor(cTiles / 2); // center horizontally
+
+		const startRow = row + anchorRowOffset; // top-left tile of footprint
+		const startCol = col + anchorColOffset;
+
+		// Canvas prep
 		ctx.setTransform(1, 0, 0, 1, 0, 0);
 		ctx.clearRect(0, 0, this.cursorTarget.width, this.cursorTarget.height);
 		ctx.imageSmoothingEnabled = false;
@@ -184,63 +181,45 @@ class GameMap {
 		const tW = W * this.camera.zoomLevel;
 		const tH = H * this.camera.zoomLevel;
 
-		// Helper: unique key for an undirected edge between two points
-		// We quantize to reduce float-key issues.
-		const q = (n: number) => Math.round(n * 1000) / 1000; // 0.001px precision
-		const edgeKey = (ax: number, ay: number, bx: number, by: number) => {
-			const a = `${q(ax)},${q(ay)}`;
-			const b = `${q(bx)},${q(by)}`;
-			return a < b ? `${a}|${b}` : `${b}|${a}`;
-		};
+		// --- Compute a single bounding diamond over the rectangular footprint ---
+		// We do this by scanning all tiles in the footprint to find:
+		//   min top Y (top of any tile), max bottom Y, min left X, max right X.
+		let minTopY = Infinity;
+		let maxBottomY = -Infinity;
+		let minLeftX = Infinity;
+		let maxRightX = -Infinity;
 
-		// Store edges that belong to the final perimeter:
-		// If an edge appears twice (shared by adjacent tiles), remove it.
-		const perimeter = new Map<
-			string,
-			{ ax: number; ay: number; bx: number; by: number }
-		>();
-
-		// Helper: add (toggle) an edge
-		const addEdge = (ax: number, ay: number, bx: number, by: number) => {
-			const key = edgeKey(ax, ay, bx, by);
-			if (perimeter.has(key)) {
-				perimeter.delete(key); // Internal edge — cancel out
-			} else {
-				perimeter.set(key, { ax, ay, bx, by });
-			}
-		};
-
-		// Walk each tile in the footprint and add its 4 edges
 		for (let dr = 0; dr < rTiles; dr++) {
 			for (let dc = 0; dc < cTiles; dc++) {
 				const r = startRow + dr;
 				const c = startCol + dc;
 
-				// Tile's world top-left + project to screen (top-left of the diamond)
 				const { wx, wy } = rcToWorldTopLeft(r, c, this._metrics, this._bounds);
 				const { x, y } = worldToScreen(wx, wy, tfSnap);
 
-				// Diamond vertices in screen space
-				const top = { x: x + tW / 2, y: y };
-				const right = { x: x + tW, y: y + tH / 2 };
-				const bottom = { x: x + tW / 2, y: y + tH };
-				const left = { x: x, y: y + tH / 2 };
+				// Single tile diamond vertices in screen space
+				const topY = y;
+				const bottomY = y + tH;
+				const leftX = x;
+				const rightX = x + tW;
 
-				// Add edges (undirected). Interior edges will cancel.
-				addEdge(top.x, top.y, right.x, right.y);
-				addEdge(right.x, right.y, bottom.x, bottom.y);
-				addEdge(bottom.x, bottom.y, left.x, left.y);
-				addEdge(left.x, left.y, top.x, top.y);
+				if (topY < minTopY) minTopY = topY;
+				if (bottomY > maxBottomY) maxBottomY = bottomY;
+				if (leftX < minLeftX) minLeftX = leftX;
+				if (rightX > maxRightX) maxRightX = rightX;
 			}
 		}
 
-		// Draw the resulting perimeter
-		// We can render each edge individually to avoid needing to sort them into a loop.
+		// Diamond corners from those extrema
+		const midX = (minLeftX + maxRightX) / 2;
+		const midY = (minTopY + maxBottomY) / 2;
+
 		ctx.beginPath();
-		for (const { ax, ay, bx, by } of perimeter.values()) {
-			ctx.moveTo(ax, ay);
-			ctx.lineTo(bx, by);
-		}
+		ctx.moveTo(midX, minTopY); // top
+		ctx.lineTo(maxRightX, midY); // right
+		ctx.lineTo(midX, maxBottomY); // bottom
+		ctx.lineTo(minLeftX, midY); // left
+		ctx.closePath();
 		ctx.stroke();
 
 		ctx.restore();
@@ -458,6 +437,28 @@ class GameMap {
 		};
 
 		this.entities.push(entity);
+	}
+
+	// What if we're dragging area from bottom to top, right to left? order of rows/columns wouldn't be sorted - we need to sort the selected area
+	clearEntitiesInArea(area: [number, number, number, number]) {
+		const [x0, y0, x1, y1] = area;
+		const fromRow = Math.min(x0, x1);
+		const toRow = Math.max(x0, x1);
+		const fromCol = Math.min(y0, y1);
+		const toCol = Math.max(y0, y1);
+		this.entities = this.entities.filter((entity) => {
+			const [ex, ey] = entity.anchor;
+			// const tr = ex + (entity.size?.[0] ?? 1) - 1; // bottom row of entity footprint
+			// const tc = ey + (entity.size?.[1] ?? 1) - 1; // earliest column of entity footprint
+
+			// TODO - expand to cover all tiles occupied by the entity
+			const entityIsInArea =
+				ex >= fromRow && ex <= toRow && ey >= fromCol && ey <= toCol;
+			// || (tr >= fromRow && tr <= toRow && tc >= fromCol && tc <= toCol);
+
+			// We allow entities that are not within the area to remain
+			return !entityIsInArea;
+		});
 	}
 }
 export default GameMap;

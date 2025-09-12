@@ -79,7 +79,7 @@
 
     onMount(async () => {
 
-        const { ground, entities } = await loadMapData('/maps/32x32.json');
+        const { ground, entities } = await loadMapData('/maps/128x128.json');
         const imageAssets = await loadJSON('/imageAssetSets/1.json');
 
         /*
@@ -201,6 +201,7 @@
         function clickOnTile (tile: [number, number] | null) {
             if (tile && selectedImageAsset && gameMap) {
                 // NOTE - change this so that it looks at the tile type (ground or entity)
+                gameMap.clearEntitiesInArea([...tile, ...tile]);
                 if (selectedImageAsset?.type === 'ground') {
                     if (Array.isArray(tile)) {
                         gameMap.ground[tile[0]][tile[1]] = [0, selectedImageAsset.code];
@@ -219,6 +220,7 @@
         function clickOnTiles (tiles: [number, number][]) {
             if (tiles.length === 0) return;
             if (selectedImageAsset && gameMap) {
+                gameMap.clearEntitiesInArea([...tiles[0], ...tiles[tiles.length - 1]]);
                 for (const tile of tiles) {
                     gameMap.ground[tile[0]][tile[1]] = [0, selectedImageAsset.code];
                 }
