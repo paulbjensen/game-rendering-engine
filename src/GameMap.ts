@@ -1,4 +1,3 @@
-import { image } from "@sveu/browser";
 import type ImageAssetSet from "./assets/ImageAssetSet";
 import type Camera from "./Camera";
 import {
@@ -334,12 +333,14 @@ class GameMap {
 
 		const W = this.imageAssetSet.baseTileWidth;
 		const H = this.imageAssetSet.baseTileHeight;
-		const Wmax = Math.max(
-			...this.imageAssetSet.imageAssets.map((a) => a.width ?? W),
-		);
-		const Hmax = Math.max(
-			...this.imageAssetSet.imageAssets.map((a) => a.height ?? H),
-		);
+		// NOTE - Commented out to fix a performance regression on iOS devices with an imageAsset being 128px wide and 128px high
+		const Wmax = W; //Math.max(
+		// 	...this.imageAssetSet.imageAssets.map((a) => a.width ?? W),
+		// );
+		// NOTE - Commented out to fix a performance regression on iOS devices
+		const Hmax = H; //Math.max(
+		// 	...this.imageAssetSet.imageAssets.map((a) => a.height ?? H),
+		// );
 
 		const metrics = { W, H, Wmax, Hmax, rows: this.rows, cols: this.columns };
 		const bounds = measureMapBounds(metrics);
