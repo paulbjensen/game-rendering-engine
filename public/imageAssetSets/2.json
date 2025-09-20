@@ -1,0 +1,4 @@
+[
+    { "code": 0, "name": "grass","type": "ground", "subType": "terrain", "paintConstraint": "area", "imageUrl": "/img/assetSets/2/grass.png", "width": 64, "height": 32, "size": [1,1], "anchor": [0,0] },
+    { "code": 2, "name": "water", "type": "ground","subType": "terrain", "paintConstraint": "area", "imageUrl": "/img/assetSets/2/water.png", "width": 64, "height": 32, "size": [1,1], "anchor": [0,0] }
+]
