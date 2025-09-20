@@ -1,14 +1,7 @@
 <script lang="ts">
     import type { ImageAsset } from './types';
 
-    const { imageAssetSet, eventEmitter, selectedImageAsset, hidden } = $props();
-
-    const sections = [
-        { title: "Terrain", subType: "terrain" },
-        { title: "Roads", subType: "road" },
-        { title: "Buildings", subType: "building" },
-        { title: "Random", subType: "random" }
-    ];
+    const { sections, imageAssetSet, eventEmitter, selectedImageAsset, hidden } = $props();
     
     function toggleImageAsset(imageAsset: ImageAsset) {
         return () => {

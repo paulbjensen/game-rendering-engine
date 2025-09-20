@@ -31,5 +31,11 @@
         { "code": 26, "name": "sand-corner-right", "type": "ground","subType": "terrain", "paintConstraint": "area", "imageUrl": "/img/assetSets/1/sand-corner-right.png", "width": 64, "height": 32, "size": [1,1], "anchor": [0,0] },
         { "code": 27, "name": "tesco-shop", "type": "entity","subType": "building", "paintConstraint": "area", "imageUrl": "/img/assetSets/1/tesco-shop.png", "width": 64, "height": 64, "size": [1,1], "anchor": [0,0] },
         { "code": 28, "name": "park", "type": "entity","subType": "random", "paintConstraint": "single", "imageUrl": "/img/assetSets/1/park.png", "width": 128, "height": 128, "size": [2,2], "anchor": [1,1] }
+    ],
+    "imageAssetTypes": [
+        { "title": "Terrain", "subType": "terrain" },
+        { "title": "Roads", "subType": "road" },
+        { "title": "Buildings", "subType": "building" },
+        { "title": "Random", "subType": "random" }
     ]
 }

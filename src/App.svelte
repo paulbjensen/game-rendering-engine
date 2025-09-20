@@ -36,6 +36,7 @@
     let selectedImageAsset: ImageAsset | null = $state(null);
     let appMode: AppMode = $state('navigation');
     let gameName: string = $state('currentGame');
+    let sections = $state<{ title: string; subType: string }[]>([]);
 
     // Toggles showing/hiding the load modal
     let showLoadModal = $state(false);
@@ -80,7 +81,9 @@
     onMount(async () => {
 
         const { ground, entities } = await loadMapData('/maps/128x128.json');
-        const { baseTileWidth, baseTileHeight, imageAssets } = await loadJSON('/imageAssetSets/1.json');
+        const { imageAssetTypes, baseTileWidth, baseTileHeight, imageAssets } = await loadJSON('/imageAssetSets/1.json');
+
+        sections = imageAssetTypes; 
 
         /*
             NOTE - when we start to load games, they may use different asset 
@@ -366,7 +369,7 @@
         <canvas id="cursor"></canvas>
     </div>
     {#if imageAssetSet}
-        <Sidebar {imageAssetSet} {eventEmitter} {selectedImageAsset} hidden={appMode !== "edit"} />
+        <Sidebar {sections} {imageAssetSet} {eventEmitter} {selectedImageAsset} hidden={appMode !== "edit"} />
     {/if}
     <TopBar {appMode} {eventEmitter} />
     {#if !hideWelcomeScreen}
