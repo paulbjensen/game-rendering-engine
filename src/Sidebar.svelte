@@ -110,7 +110,7 @@
                             onclick={toggleImageAsset(imageAsset)}
                             class={selectedImageAsset?.code === imageAsset.code ? 'selected' : ''}
                         >
-                            <img src={imageAsset.imageUrl} alt={imageAsset.name} />
+                            <img src={imageAsset.imageUrl} alt={imageAsset.name} width="64" />
                         </button>
                     {/each}
                 </div>

@@ -80,7 +80,7 @@
     onMount(async () => {
 
         const { ground, entities } = await loadMapData('/maps/128x128.json');
-        const imageAssets = await loadJSON('/imageAssetSets/1.json');
+        const { baseTileWidth, baseTileHeight, imageAssets } = await loadJSON('/imageAssetSets/1.json');
 
         /*
             NOTE - when we start to load games, they may use different asset 
@@ -89,8 +89,8 @@
         */
         imageAssetSet = new ImageAssetSet({
             imageAssets,
-            baseTileWidth: 64,
-            baseTileHeight: 32
+            baseTileWidth,
+            baseTileHeight
         });
 
         /*

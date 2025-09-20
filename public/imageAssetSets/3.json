@@ -1,0 +1,10 @@
+{
+    "baseTileWidth": 128,
+    "baseTileHeight": 64,
+    "imageAssets": [
+        { "code": 0, "name": "grass","type": "ground", "subType": "terrain", "paintConstraint": "area", "imageUrl": "/img/assetSets/3/grass.png", "width": 128, "height": 64, "size": [1,1], "anchor": [0,0] },
+        { "code": 2, "name": "water", "type": "ground","subType": "terrain", "paintConstraint": "area", "imageUrl": "/img/assetSets/3/water.png", "width": 128, "height": 64, "size": [1,1], "anchor": [0,0] }
+    ]
+}
+
+
