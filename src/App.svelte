@@ -83,7 +83,7 @@
         const { ground, entities } = await loadMapData('/maps/128x128.json');
         const { imageAssetTypes, baseTileWidth, baseTileHeight, imageAssets } = await loadJSON('/imageAssetSets/1.json');
 
-        sections = imageAssetTypes; 
+        sections = imageAssetTypes;
 
         /*
             NOTE - when we start to load games, they may use different asset 
@@ -253,7 +253,11 @@
                 const gameData = {
                     version: 2,
                     ground: gameMap.ground,
-                    entities: gameMap.entities
+                    entities: gameMap.entities,
+                    imageAssetTypes,
+                    baseTileWidth, 
+                    baseTileHeight, 
+                    imageAssets 
                 };
                 gameManager.save(name, gameData);
                 alert('Game saved!');
@@ -267,15 +271,40 @@
             const game = gameManager.load(name);
             if (game && gameMap) {
                 if (Array.isArray(game.data)) {
+                    console.log('Loading version 1 map data');
                     gameMap.updateGround(game.data);
                     gameMap.updateEntities([]);
+                    gameMap.drawBackground();
+                    gameMap.draw();
                 } else {
-                    // TODO - update entities
+                    console.log('Loading version 2 map data');
                     gameMap.updateGround(game.data.ground);
                     gameMap.updateEntities(game.data.entities);
+
+                    // Resolve asset set and tile sizes, falling back to defaults if missing
+                    const resolvedImageAssets = Array.isArray(game.data.imageAssets) && game.data.imageAssets.length > 0
+                        ? game.data.imageAssets
+                        : imageAssets;
+                    const resolvedBaseTileWidth = typeof game.data.baseTileWidth === 'number'
+                        ? game.data.baseTileWidth
+                        : baseTileWidth;
+                    const resolvedBaseTileHeight = typeof game.data.baseTileHeight === 'number'
+                        ? game.data.baseTileHeight
+                        : baseTileHeight;
+
+                    gameMap.imageAssetSet = imageAssetSet = new ImageAssetSet({
+                        imageAssets: resolvedImageAssets,
+                        baseTileWidth: resolvedBaseTileWidth,
+                        baseTileHeight: resolvedBaseTileHeight
+                    });
+
+                    (async () => {
+                        await gameMap.load();
+                        gameMap.drawBackground();
+                        gameMap.draw();
+                    })();
+                    sections = game.data.imageAssetTypes ?? imageAssetTypes;
                 }
-                gameMap.drawBackground();
-                gameMap.draw();
             }
         }
 
