@@ -47,10 +47,10 @@ export type MapDataV2 = {
 	version: number;
 	ground: MapData;
 	entities: Entity[];
-	imageAssetTypes: { title: string; subType: ImageAssetSubType }[];
-	baseTileWidth: number;
-	baseTileHeight: number;
-	imageAssets: ImageAsset[];
+	imageAssetSetUrl: string;
+	panX?: number;
+	panY?: number;
+	zoomLevel?: number;
 };
 
 export type AppMode = "navigation" | "edit";

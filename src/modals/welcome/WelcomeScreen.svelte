@@ -1,10 +1,11 @@
 <script lang="ts">
 
     import Load from "./Load.svelte";
+    import New from "./New.svelte";
 
-    const { hide, gameManager, eventEmitter } = $props();
+    const { hide, gameManager, eventEmitter, imageAssetSets } = $props();
 
-    type Screens = 'welcome' | 'load' | 'controls' | 'about';
+    type Screens = 'welcome' | 'new' | 'load' | 'controls' | 'about';
 
     let currentScreen = $state('welcome');
 
@@ -154,11 +155,14 @@
         {#if currentScreen==='welcome'}
                 <img src="/img/logo.svg" alt="Babsland logo">
                 <div id="welcome-screen-options">
-                    <button onclick={hide}>Start</button>
+                    <button onclick={() => loadScreen('new')}>Start</button>
                     <button onclick={() => loadScreen('load')}>Load Map</button>
                     <button onclick={() => loadScreen('controls')}>See Controls</button>
                     <button onclick={() => loadScreen('about')}>About</button>
                 </div>
+        {/if}
+        {#if currentScreen==='new'}
+            <New {eventEmitter} {imageAssetSets} {hide} back={() => loadScreen('welcome')}/>
         {/if}
         {#if currentScreen==='load'}
             <Load {gameManager} {eventEmitter} {hide} back={() => loadScreen('welcome')}/>

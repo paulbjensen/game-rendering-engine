@@ -20,6 +20,12 @@ type MyEvents = EventMap & {
 	loadGame: () => void;
 	saveGame: (name: string) => void;
 	deleteGame: (name: string) => void;
+	newGame: (options: {
+		name: string;
+		imageAssetSetUrl: string;
+		mapRows: number;
+		mapColumns: number;
+	}) => void;
 };
 
 // Create an instance of the event emitter class with type safety

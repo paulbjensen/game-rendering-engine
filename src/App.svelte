@@ -7,7 +7,7 @@
     import Mouse from './controls/Mouse';
     import Cursor from './controls/cursor/Cursor';
     import GameMap from './GameMap';
-    import type { AppMode, MapDataV2, ImageAsset } from './types';
+    import type { AppMode, Entity, MapDataV2, ImageAsset } from './types';
     import { loadJSON } from './utils';
 	import ImageAssetSet from './assets/ImageAssetSet';
     import Sidebar from './Sidebar.svelte';
@@ -31,12 +31,19 @@
 
     const gameManager = new GameManager();
 
+    const imageAssetSets = [
+        { name: 'One', url: '/imageAssetSets/1.json' },
+        { name: 'Two', url: '/imageAssetSets/2.json' },
+        { name: 'Three', url: '/imageAssetSets/3.json' },
+    ];
+
     let gameMap: GameMap | null = null;
     let imageAssetSet: ImageAssetSet | null = $state(null);
     let selectedImageAsset: ImageAsset | null = $state(null);
     let appMode: AppMode = $state('navigation');
     let gameName: string = $state('currentGame');
     let sections = $state<{ title: string; subType: string }[]>([]);
+    let imageAssetSetUrl = $state(imageAssetSets[0].url);
 
     // Toggles showing/hiding the load modal
     let showLoadModal = $state(false);
@@ -72,7 +79,7 @@
         }
         const isVersionOne = Array.isArray(data);
         if (isVersionOne) {
-            return { ground: data, version: 2, entities: [] };
+            return { ground: data, version: 2, entities: [], imageAssetSetUrl: '/imageAssetSets/1.json' };
         } else {
             return data;
         }
@@ -254,10 +261,10 @@
                     version: 2,
                     ground: gameMap.ground,
                     entities: gameMap.entities,
-                    imageAssetTypes,
-                    baseTileWidth, 
-                    baseTileHeight, 
-                    imageAssets 
+                    imageAssetSetUrl,
+                    panX: camera.panX,
+                    panY: camera.panY,
+                    zoomLevel: camera.zoomLevel
                 };
                 gameManager.save(name, gameData);
                 alert('Game saved!');
@@ -265,7 +272,7 @@
         }
 
         // Loads the game
-        function loadGame (name?:string) {
+        async function loadGame (name?:string) {
             if (!name) name = 'currentGame';
             gameName = name;
             const game = gameManager.load(name);
@@ -278,24 +285,19 @@
                     gameMap.draw();
                 } else {
                     console.log('Loading version 2 map data');
+                    console.log(game.data);
                     gameMap.updateGround(game.data.ground);
                     gameMap.updateEntities(game.data.entities);
+                    imageAssetSetUrl = game.data.imageAssetSetUrl;
+
 
                     // Resolve asset set and tile sizes, falling back to defaults if missing
-                    const resolvedImageAssets = Array.isArray(game.data.imageAssets) && game.data.imageAssets.length > 0
-                        ? game.data.imageAssets
-                        : imageAssets;
-                    const resolvedBaseTileWidth = typeof game.data.baseTileWidth === 'number'
-                        ? game.data.baseTileWidth
-                        : baseTileWidth;
-                    const resolvedBaseTileHeight = typeof game.data.baseTileHeight === 'number'
-                        ? game.data.baseTileHeight
-                        : baseTileHeight;
+                    const { imageAssetTypes, baseTileWidth, baseTileHeight, imageAssets } = await loadJSON(game.data.imageAssetSetUrl || imageAssetSets[0].url);
 
                     gameMap.imageAssetSet = imageAssetSet = new ImageAssetSet({
-                        imageAssets: resolvedImageAssets,
-                        baseTileWidth: resolvedBaseTileWidth,
-                        baseTileHeight: resolvedBaseTileHeight
+                        imageAssets: imageAssets,
+                        baseTileWidth: baseTileWidth,
+                        baseTileHeight: baseTileHeight
                     });
 
                     (async () => {
@@ -303,9 +305,22 @@
                         gameMap.drawBackground();
                         gameMap.draw();
                     })();
-                    sections = game.data.imageAssetTypes ?? imageAssetTypes;
+                    sections = imageAssetTypes;
                 }
             }
+            // Just in case the loaded map for one is way out of view compared to the next map
+
+            const { panX, panY, zoomLevel } = game.data as MapDataV2;
+            if (panX && panY && zoomLevel) {
+                camera.panX = panX;
+                camera.panY = panY;
+                camera.zoomLevel = zoomLevel;
+            } else {
+                camera.panX = 0;
+                camera.panY = 0;
+                camera.zoomLevel = 1;
+            }
+
         }
 
         // Deletes a game
@@ -315,6 +330,37 @@
                 alert('Game deleted!');
             }
         }
+
+        function newGame (data: { name: string; imageAssetSetUrl: string; mapRows: number; mapColumns: number }) {
+            gameName = data.name;
+            (async () => {
+                imageAssetSetUrl = data.imageAssetSetUrl;
+                const { imageAssetTypes, baseTileWidth, baseTileHeight, imageAssets } = await loadJSON(data.imageAssetSetUrl);
+                sections = imageAssetTypes;
+                if (gameMap) {
+
+                    const columns = new Array(data.mapColumns).fill(0);
+                    const ground = new Array(data.mapRows).fill(0).map(() => [...columns]);
+                    const entities:Entity[] = [];
+
+                    gameMap.ground = ground;
+                    gameMap.updateGround(ground);
+                    gameMap.updateEntities(entities);
+                    gameMap.imageAssetSet = imageAssetSet = new ImageAssetSet({
+                        imageAssets,
+                        baseTileWidth,
+                        baseTileHeight
+                    });
+                    gameMap.rows = data.mapRows;
+                    gameMap.columns = data.mapColumns;
+                    await gameMap.load();
+                    resizeCanvases();
+                    gameMap.drawBackground();
+                    gameMap.draw();
+                }
+            })();
+            // hideWelcomeScreen = true;
+        };
 
         /*
             If we attach/detach the iPad Pro from a magic keyboard, 
@@ -353,6 +399,7 @@
         eventEmitter.on('setAppMode', setAppMode);
         eventEmitter.on('saveGame', saveGame);
         eventEmitter.on('loadGame', loadGame);
+        eventEmitter.on('newGame', newGame);
         eventEmitter.on('deleteGame', deleteGame);
         eventEmitter.on('toggleFPSCounter', toggleFPSCounter);
         eventEmitter.on('showLoadModal', showTheLoadModal);
@@ -402,7 +449,7 @@
     {/if}
     <TopBar {appMode} {eventEmitter} />
     {#if !hideWelcomeScreen}
-        <WelcomeScreen {gameManager} {eventEmitter} hide={() => hideWelcomeScreen = true} />
+        <WelcomeScreen {gameManager} {imageAssetSets} {eventEmitter} hide={() => hideWelcomeScreen = true} />
     {/if}
     {#if showLoadModal}
         <LoadModal {gameManager} {eventEmitter} hide={() => showLoadModal = false} />
