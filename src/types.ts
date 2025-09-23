@@ -14,6 +14,29 @@ export type MapData = MapTile[][];
 */
 export type PaintConstraint = "diagonal" | "axial" | "area" | "single";
 
+export type SpriteLoop = "loop" | "hold" | "pingpong";
+
+export type SpriteAnimation = {
+	frames: number[]; // indices into the frame list (grid-indexed or rect-indexed)
+	frameDurationMs: number; // per-frame time
+	loop: SpriteLoop;
+};
+
+export type SpriteMeta =
+	| {
+			mode: "grid";
+			frameSize: [number, number];
+			grid: { rows: number; cols: number; order?: "row-major" | "col-major" };
+			animations: Record<string, SpriteAnimation>;
+			defaultAnimation: string;
+	  }
+	| {
+			mode: "rects";
+			rects: { x: number; y: number; w: number; h: number }[];
+			animations: Record<string, SpriteAnimation>;
+			defaultAnimation: string;
+	  };
+
 export type ImageAssetType = "ground" | "entity";
 
 export type ImageAssetSubType = "terrain" | "road" | "building" | "random";
@@ -30,6 +53,7 @@ export type ImageAsset = {
 	height: number;
 	size: [number, number];
 	anchor: [number, number];
+	sprite?: SpriteMeta; // NEW
 };
 
 export type Entity = {
@@ -41,6 +65,13 @@ export type Entity = {
 	elevation?: number; // tiles high the base sits (for cliffs)
 	offsetPx?: [number, number]; // pixel nudge to seat artwork on anchor
 	metadata?: Record<string, unknown>; // freeform metadata to store about the entity
+
+	// NEW (optional). If omitted, use asset.sprite.defaultAnimation
+	animationName?: string;
+	animationStartMs?: number; // engine fills this when first drawn
+	animationPaused?: boolean;
+	animationPingPongDir?: 1 | -1; // internal state for ping-pong
+	animationFrameOverride?: number; // for scripting/manual control
 };
 
 export type MapDataV2 = {

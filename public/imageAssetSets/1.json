@@ -31,7 +31,29 @@
         { "code": 26, "name": "sand-corner-right", "type": "ground","subType": "terrain", "paintConstraint": "area", "imageUrl": "/img/assetSets/1/sand-corner-right.png", "width": 64, "height": 32, "size": [1,1], "anchor": [0,0] },
         { "code": 27, "name": "tesco-shop", "type": "entity","subType": "building", "paintConstraint": "area", "imageUrl": "/img/assetSets/1/tesco-shop.png", "width": 64, "height": 64, "size": [1,1], "anchor": [0,0] },
         { "code": 28, "name": "park", "type": "entity","subType": "random", "paintConstraint": "single", "imageUrl": "/img/assetSets/1/park.png", "width": 128, "height": 128, "size": [2,2], "anchor": [1,1] },
-        { "code": 29, "name": "car-white-bl", "type": "entity","subType": "vehicle", "paintConstraint": "area", "imageUrl": "/img/assetSets/1/car-white-bl.png", "width": 64, "height": 32, "size": [1,1], "anchor": [0,0] }
+        { "code": 29, "name": "car-white-bl", "type": "entity","subType": "vehicle", "paintConstraint": "area", "imageUrl": "/img/assetSets/1/car-white-bl.png", "width": 64, "height": 32, "size": [1,1], "anchor": [0,0] },
+        {
+            "code": 30,
+            "name": "wind-turbine-all",
+            "type": "entity",
+            "subType": "random",
+            "paintConstraint": "area",
+            "imageUrl": "/img/assetSets/1/wind-turbine-all.png",
+            "width": 64,
+            "height": 128,
+            "size": [1, 1],
+            "anchor": [0, 0],
+            "sprite": {
+                "mode": "grid",      
+                "frameSize": [64, 128],
+                "grid": { "rows": 1, "cols": 3, "order": "row-major" },
+                "animations": {
+                    "spin":  { "frames": [0,1,2], "frameDurationMs": 120, "loop": "loop" },
+                    "idle":  { "frames": [0],     "frameDurationMs": 1000, "loop": "hold" }
+                },
+                "defaultAnimation": "spin"
+            }
+        }
     ],
     "imageAssetTypes": [
         { "title": "Terrain", "subType": "terrain" },

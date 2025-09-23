@@ -16,12 +16,16 @@ class GameMap {
 	target: HTMLCanvasElement;
 	cursorTarget: HTMLCanvasElement;
 	camera: Camera;
+
 	ground: MapData;
 	entities: Entity[];
+
 	rows: number;
 	columns: number;
+
 	selectedTile: [number, number] | null = null;
 	imageAssetSet: ImageAssetSet;
+
 	_bounds?: MapBounds;
 	_metrics?: {
 		W: number;
@@ -31,6 +35,10 @@ class GameMap {
 		rows: number;
 		cols: number;
 	};
+
+	// internal time marker (optional)
+	private _lastPerfNow = 0;
+
 	constructor({
 		background,
 		target,
@@ -55,6 +63,7 @@ class GameMap {
 		this.ground = ground;
 		this.entities = entities;
 		this.imageAssetSet = imageAssetSet;
+
 		this.draw = this.draw.bind(this);
 		this.loadImageAssets = this.loadImageAssets.bind(this);
 		this.hasLoaded = this.hasLoaded.bind(this);
@@ -64,8 +73,13 @@ class GameMap {
 		this.clearCursor = this.clearCursor.bind(this);
 		this.clearEntitiesInArea = this.clearEntitiesInArea.bind(this);
 		this.fitsOnMap = this.fitsOnMap.bind(this);
+
+		this.renderFrame = this.renderFrame.bind(this);
+		this.drawAnimatedEntities = this.drawAnimatedEntities.bind(this);
+		this.computeSpriteSourceRect = this.computeSpriteSourceRect.bind(this);
+		this.frameIndexToRect = this.frameIndexToRect.bind(this);
+
 		this.rows = this.ground.length;
-		// This will find the maximum number of columns in a row within the ground
 		this.columns = Math.max(...this.ground.map((r) => r.length));
 	}
 
@@ -80,7 +94,6 @@ class GameMap {
 					}
 				}
 			}
-
 			this.imageAssetSet.loadImages(Array.from(imageCodes));
 		} else {
 			this.imageAssetSet.loadImages();
@@ -162,8 +175,6 @@ class GameMap {
 		const cTiles = imageAsset?.size?.[1] ?? 1;
 
 		// ---- Anchor: bottom-center of the footprint ----
-		// (row,col) is the tile under the mouse cursor, i.e. the anchor.
-		// Shift the rectangle so that its bottom-center lands on (row,col).
 		const anchorRowOffset = -(rTiles - 1); // shift up by (rows-1)
 		const anchorColOffset = -Math.floor(cTiles / 2); // center horizontally
 
@@ -173,18 +184,16 @@ class GameMap {
 		// Canvas prep
 		ctx.setTransform(1, 0, 0, 1, 0, 0);
 		ctx.clearRect(0, 0, this.cursorTarget.width, this.cursorTarget.height);
-		ctx.imageSmoothingEnabled = false;
+		ctx.imageSmoothingEnabled = true;
 
 		ctx.save();
 		ctx.strokeStyle = "white";
 		ctx.lineWidth = 2 * this.camera.zoomLevel;
 
-		const tW = W * this.camera.zoomLevel;
-		const tH = H * this.camera.zoomLevel;
+		const tW = this._metrics.W * this.camera.zoomLevel;
+		const tH = this._metrics.H * this.camera.zoomLevel;
 
-		// --- Compute a single bounding diamond over the rectangular footprint ---
-		// We do this by scanning all tiles in the footprint to find:
-		//   min top Y (top of any tile), max bottom Y, min left X, max right X.
+		// Determine bounding diamond for footprint
 		let minTopY = Infinity;
 		let maxBottomY = -Infinity;
 		let minLeftX = Infinity;
@@ -198,7 +207,6 @@ class GameMap {
 				const { wx, wy } = rcToWorldTopLeft(r, c, this._metrics, this._bounds);
 				const { x, y } = worldToScreen(wx, wy, tfSnap);
 
-				// Single tile diamond vertices in screen space
 				const topY = y;
 				const bottomY = y + tH;
 				const leftX = x;
@@ -237,7 +245,6 @@ class GameMap {
 		const ctx = this.cursorTarget.getContext("2d");
 		if (!ctx || !this._metrics || !this._bounds) return;
 
-		// Build the same view transform as sampleBackground()
 		const tf = getViewTransform({
 			targetW: this.target.width,
 			targetH: this.target.height,
@@ -247,7 +254,7 @@ class GameMap {
 			panX: this.camera.panX,
 			panY: this.camera.panY,
 		});
-		const tfSnap = snapped(tf); // snap only for crisp on-screen lines
+		const tfSnap = snapped(tf);
 
 		const W = this._metrics.W;
 		const H = this._metrics.H;
@@ -258,25 +265,21 @@ class GameMap {
 		// Clear overlay in screen space
 		ctx.setTransform(1, 0, 0, 1, 0, 0);
 		ctx.clearRect(0, 0, this.cursorTarget.width, this.cursorTarget.height);
-		ctx.imageSmoothingEnabled = false;
+		ctx.imageSmoothingEnabled = true;
 
 		ctx.save();
 		ctx.strokeStyle = "white";
 		ctx.lineWidth = 2 * zoom;
 
 		for (const [row, col] of tiles) {
-			// World top-left of this tile's base footprint (W×H lattice)
 			const { wx, wy } = rcToWorldTopLeft(
 				row,
 				col,
 				this._metrics,
 				this._bounds,
 			);
-
-			// Convert to screen using the same (snapped) transform as rendering
 			const { x, y } = worldToScreen(wx, wy, tfSnap);
 
-			// Draw the diamond footprint (W×H) in screen space
 			ctx.beginPath();
 			ctx.moveTo(x + tileWScreen / 2, y);
 			ctx.lineTo(x + tileWScreen, y + tileHScreen / 2);
@@ -298,6 +301,10 @@ class GameMap {
 		ctx.clearRect(0, 0, this.cursorTarget.width, this.cursorTarget.height);
 	}
 
+	/**
+	 * Copies the pre-rendered background canvas to the target (view) canvas.
+	 * Use this per frame before drawing dynamic/animated entities.
+	 */
 	sampleBackground() {
 		const ctx = this.target.getContext("2d");
 		if (!ctx) return;
@@ -323,21 +330,27 @@ class GameMap {
 		ctx.setTransform(1, 0, 0, 1, 0, 0);
 	}
 
+	/**
+	 * For compatibility with existing callers that expect a single draw pass of the background.
+	 * Prefer using renderFrame(perfNow) in your RAF loop for animations.
+	 */
 	draw() {
 		return this.sampleBackground();
 	}
 
+	/**
+	 * Pre-renders the static ground tiles into `background`.
+	 * NOTE: entities are intentionally NOT drawn here anymore (to allow animation).
+	 */
 	drawBackground() {
 		const ctx = this.background.getContext("2d");
 		if (!ctx) return;
 
 		const W = this.imageAssetSet.baseTileWidth;
 		const H = this.imageAssetSet.baseTileHeight;
-		// NOTE - Commented out to fix a performance regression on iOS devices with an imageAsset being 128px wide and 128px high
-		const Wmax = W; //Math.max(
-		// 	...this.imageAssetSet.imageAssets.map((a) => a.width ?? W),
-		// );
-		// NOTE - Commented out to fix a performance regression on iOS devices
+
+		// NOTE - keep Wmax minimal for iOS perf
+		const Wmax = W;
 		const Hmax = Math.max(
 			...this.imageAssetSet.imageAssets.map((a) => a.height ?? H),
 		);
@@ -348,9 +361,10 @@ class GameMap {
 		this.background.width = bounds.bgW;
 		this.background.height = bounds.bgH;
 
-		ctx.imageSmoothingEnabled = false;
+		ctx.imageSmoothingEnabled = true;
 		ctx.clearRect(0, 0, bounds.bgW, bounds.bgH);
 
+		// --- draw static ground only ---
 		for (let r = 0; r < this.rows; r++) {
 			for (let c = 0; c < this.columns; c++) {
 				const codes = this.ground[r][c];
@@ -360,14 +374,13 @@ class GameMap {
 					);
 					if (!tile?.image) return;
 
-					// base-grid placement + sprite centering
+					// ground placement (center on W×H base footprint)
 					const tW = tile.width ?? W;
 					const tH = tile.height ?? H;
 
 					const { wx, wy } = rcToWorldTopLeft(r, c, metrics, bounds);
 					const x = wx + (W - tW) / 2;
 					const y = wy - (tH - H);
-
 					ctx.drawImage(tile.image, 0, 0, tW, tH, x, y, tW, tH);
 				};
 
@@ -376,53 +389,14 @@ class GameMap {
 			}
 		}
 
-		/*
-			This adds the entities to the map, based on their anchor 
-			position within the map
-			
-			Maybe it belongs in its own function? Maybe
-		*/
-		for (let r = 0; r < this.rows; r++) {
-			for (let c = 0; c < this.columns; c++) {
-				const entities = this.entities.filter(
-					(e) => e.anchor[0] === r && e.anchor[1] === c,
-				);
-				if (entities.length === 0) continue;
-				for (const entity of entities) {
-					const tile = this.imageAssetSet.imageAssets.find(
-						(t) => t.code === entity.code,
-					);
-					if (!tile?.image) continue;
-
-					const { wx, wy } = rcToWorldTopLeft(
-						entity.anchor[0],
-						entity.anchor[1],
-						metrics,
-						bounds,
-					);
-					const x = wx + (W - tile.width) / 2;
-					const y = wy - (tile.height - H);
-
-					ctx.drawImage(
-						tile.image,
-						0,
-						0,
-						tile.width,
-						tile.height,
-						x,
-						y,
-						tile.width,
-						tile.height,
-					);
-				}
-			}
-		}
-
 		// Store for reuse
 		this._bounds = bounds;
 		this._metrics = metrics;
 	}
 
+	/**
+	 * Returns true if an asset (by its footprint/anchor) fits on the map bounds.
+	 */
 	fitsOnMap({
 		position,
 		imageAsset,
@@ -431,9 +405,6 @@ class GameMap {
 		imageAsset: ImageAsset;
 	}) {
 		const [row, column] = position;
-
-		console.log({ position, imageAsset });
-		// TODO - add anchor to imageAsset
 
 		const withinMapRowRange =
 			row - (imageAsset.size[0] - 1 + (imageAsset.anchor[0] - 1)) >= 0;
@@ -458,12 +429,17 @@ class GameMap {
 			elevation: 0,
 			offsetPx: [0, 0],
 			metadata: {},
+			// animation fields are optional; if omitted and asset has sprite,
+			// default animation will be used automatically
 		};
 
 		this.entities.push(entity);
 	}
 
-	// What if we're dragging area from bottom to top, right to left? order of rows/columns wouldn't be sorted - we need to sort the selected area
+	/**
+	 * Removes entities whose anchor lies within the given area.
+	 * (You may later expand to cover full footprints.)
+	 */
 	clearEntitiesInArea(area: [number, number, number, number]) {
 		const [x0, y0, x1, y1] = area;
 		const fromRow = Math.min(x0, x1);
@@ -472,17 +448,216 @@ class GameMap {
 		const toCol = Math.max(y0, y1);
 		this.entities = this.entities.filter((entity) => {
 			const [ex, ey] = entity.anchor;
-			// const tr = ex + (entity.size?.[0] ?? 1) - 1; // bottom row of entity footprint
-			// const tc = ey + (entity.size?.[1] ?? 1) - 1; // earliest column of entity footprint
-
-			// TODO - expand to cover all tiles occupied by the entity
 			const entityIsInArea =
 				ex >= fromRow && ex <= toRow && ey >= fromCol && ey <= toCol;
-			// || (tr >= fromRow && tr <= toRow && tc >= fromCol && tc <= toCol);
-
-			// We allow entities that are not within the area to remain
 			return !entityIsInArea;
 		});
 	}
+
+	/* ===========================
+	 *   ANIMATION RENDER PATH
+	 * ===========================
+	 */
+
+	/**
+	 * Call this from your RAF loop: requestAnimationFrame((now)=>gameMap.renderFrame(now))
+	 * 1) Blits the pre-rendered background to target
+	 * 2) Draws entities (animated if sprite metadata exists)
+	 */
+	renderFrame(perfNow: number) {
+		this._lastPerfNow = perfNow;
+		// copy background to target (view)
+		this.sampleBackground();
+		// draw animated/dynamic entities on top
+		this.drawAnimatedEntities(perfNow);
+	}
+
+	/**
+	 * Draws entities onto `target` using current camera transform.
+	 * Uses sprite frame selection if the asset defines a `sprite` block.
+	 */
+	private drawAnimatedEntities(perfNow: number) {
+		const ctx = this.target.getContext("2d");
+		if (!ctx || !this._metrics || !this._bounds) return;
+
+		const tf = getViewTransform({
+			targetW: this.target.width,
+			targetH: this.target.height,
+			bgW: this.background.width,
+			bgH: this.background.height,
+			zoom: this.camera.zoomLevel,
+			panX: this.camera.panX,
+			panY: this.camera.panY,
+		});
+		const tfSnap = snapped(tf);
+
+		const W = this.imageAssetSet.baseTileWidth;
+		const H = this.imageAssetSet.baseTileHeight;
+
+		// Optional: z-order by (row+col)
+		const toDraw = this.entities
+			.slice()
+			.sort((a, b) => a.anchor[0] + a.anchor[1] - (b.anchor[0] + b.anchor[1]));
+
+		ctx.imageSmoothingEnabled = true;
+		ctx.setTransform(tfSnap.zoom, 0, 0, tfSnap.zoom, tfSnap.e, tfSnap.f);
+
+		for (const entity of toDraw) {
+			const asset = this.imageAssetSet.imageAssets.find(
+				(a) => a.code === entity.code,
+			);
+			if (!asset?.image) continue;
+
+			const { wx, wy } = rcToWorldTopLeft(
+				entity.anchor[0],
+				entity.anchor[1],
+				this._metrics,
+				this._bounds,
+			);
+			const drawX =
+				wx + (W - (asset.width ?? W)) / 2 + (entity.offsetPx?.[0] ?? 0);
+			const drawY =
+				wy - ((asset.height ?? H) - H) + (entity.offsetPx?.[1] ?? 0);
+
+			if (!asset.sprite) {
+				// static entity
+				const tW = asset.width ?? W;
+				const tH = asset.height ?? H;
+				ctx.drawImage(asset.image, 0, 0, tW, tH, drawX, drawY, tW, tH);
+				continue;
+			}
+
+			// SPRITE: pick current frame (source rect) and draw
+			const { sx, sy, sw, sh } = this.computeSpriteSourceRect(
+				asset,
+				entity,
+				perfNow,
+			);
+			const destW = asset.width ?? sw;
+			const destH = asset.height ?? sh;
+			ctx.drawImage(asset.image, sx, sy, sw, sh, drawX, drawY, destW, destH);
+		}
+
+		// reset transform
+		ctx.setTransform(1, 0, 0, 1, 0, 0);
+	}
+
+	/**
+	 * Computes the source rectangle (sx,sy,sw,sh) to sample from the spritesheet
+	 * based on the entity's animation state and the asset's sprite metadata.
+	 */
+	private computeSpriteSourceRect(
+		asset: ImageAsset,
+		entity: Entity,
+		perfNow: number,
+	) {
+		const sprite = asset.sprite as NonNullable<ImageAsset["sprite"]>;
+		const defaultAnimName =
+			(sprite as any)?.defaultAnimation ??
+			Object.keys((sprite as any)?.animations ?? {})[0];
+		const animName = entity.animationName ?? defaultAnimName;
+
+		const anim =
+			(sprite as any)?.animations?.[animName] ??
+			(sprite as any)?.animations?.[defaultAnimName];
+
+		// Fallback if no animation config is present
+		if (!anim) {
+			// Use first frame of grid/rects
+			if ((sprite as any).mode === "rects") {
+				const r = (sprite as any).rects?.[0] ?? {
+					x: 0,
+					y: 0,
+					w: asset.width,
+					h: asset.height,
+				};
+				return { sx: r.x, sy: r.y, sw: r.w, sh: r.h };
+			}
+			const [fw, fh] = (sprite as any).frameSize ?? [asset.width, asset.height];
+			return { sx: 0, sy: 0, sw: fw, sh: fh };
+		}
+
+		// initialize start time if needed
+		if (entity.animationStartMs == null) {
+			entity.animationStartMs = perfNow;
+			// entity.animationPingPongDir = 1; // kept for future use if you wish
+		}
+
+		// manual override?
+		if (typeof entity.animationFrameOverride === "number") {
+			const frameIndex =
+				anim.frames[entity.animationFrameOverride] ?? anim.frames[0];
+			return this.frameIndexToRect(sprite, frameIndex);
+		}
+
+		// paused? hold on first frame
+		if (entity.animationPaused) {
+			const frameIndex = anim.frames[0];
+			return this.frameIndexToRect(sprite, frameIndex);
+		}
+
+		const elapsed = perfNow - (entity.animationStartMs ?? perfNow);
+		const frames: number[] = anim.frames;
+		const per: number = anim.frameDurationMs ?? 100;
+		const loop: string = anim.loop ?? "loop";
+
+		switch (loop) {
+			case "hold": {
+				const idx = Math.min(frames.length - 1, Math.floor(elapsed / per));
+				return this.frameIndexToRect(sprite, frames[idx]);
+			}
+			case "pingpong": {
+				// e.g., for N frames, pingpong length = (N-1)*2
+				const period = Math.max(1, (frames.length - 1) * 2);
+				const step = Math.floor((elapsed / per) % period);
+				const goingForward = step < frames.length - 1;
+				const i = goingForward
+					? step
+					: frames.length - 1 - (step - (frames.length - 1));
+				return this.frameIndexToRect(sprite, frames[i]);
+			}
+			case "loop":
+			default: {
+				const idx = Math.floor(elapsed / per) % frames.length;
+				return this.frameIndexToRect(sprite, frames[idx]);
+			}
+		}
+	}
+
+	/**
+	 * Converts a logical frame index into a source rect depending on the sprite mode.
+	 * - For `rects`, it indexes the explicit list.
+	 * - For `grid`, it maps the index to (row,col) based on order and frame size.
+	 */
+	private frameIndexToRect(
+		sprite: NonNullable<ImageAsset["sprite"]>,
+		frameIndex: number,
+	) {
+		const s: any = sprite;
+
+		if (s.mode === "rects") {
+			const r = s.rects?.[frameIndex] ??
+				s.rects?.[0] ?? { x: 0, y: 0, w: 0, h: 0 };
+			return { sx: r.x, sy: r.y, sw: r.w, sh: r.h };
+		}
+
+		// grid mode
+		const [fw, fh] = s.frameSize ?? [0, 0];
+		const cols: number = s.grid?.cols ?? 1;
+		const rows: number = s.grid?.rows ?? 1;
+		const order: "row-major" | "col-major" = s.grid?.order ?? "row-major";
+
+		let row: number, col: number;
+		if (order === "row-major") {
+			row = Math.floor(frameIndex / cols);
+			col = frameIndex % cols;
+		} else {
+			col = Math.floor(frameIndex / rows);
+			row = frameIndex % rows;
+		}
+
+		return { sx: col * fw, sy: row * fh, sw: fw, sh: fh };
+	}
 }
+
 export default GameMap;

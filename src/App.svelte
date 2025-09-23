@@ -428,6 +428,13 @@
         await gameMap?.load();
         resizeCanvases();
 
+        let rafId = 0;
+        function tick(now: number) {
+        gameMap?.renderFrame(now);
+        rafId = requestAnimationFrame(tick);
+        }
+        rafId = requestAnimationFrame(tick);
+
     });
 
     // When unmounting the component
