@@ -203,7 +203,6 @@
         // needed
         function cameraUpdated() {
             if (!gameMap) return;
-            gameMap.draw();
             cursor.calculatePositionOnMap();
             if (
                 gameMap.selectedTile
@@ -430,8 +429,8 @@
 
         let rafId = 0;
         function tick(now: number) {
-        gameMap?.renderFrame(now);
-        rafId = requestAnimationFrame(tick);
+            gameMap?.renderFrame(now);
+            rafId = requestAnimationFrame(tick);
         }
         rafId = requestAnimationFrame(tick);
 
