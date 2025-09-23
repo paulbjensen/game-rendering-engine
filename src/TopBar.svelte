@@ -3,6 +3,9 @@
 
     function toggleEditMode() {
         const newMode = appMode === 'navigation' ? 'edit' : 'navigation';
+        if (newMode === 'navigation') {
+            eventEmitter.emit('selectImageAsset', null);
+        }
         eventEmitter.emit('setAppMode', newMode);
     }
 

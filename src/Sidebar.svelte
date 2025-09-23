@@ -17,6 +17,50 @@
             return imageAsset.subType === section.subType;
         }
     }
+
+    // --- Helpers to compute a preview frame from a spritesheet ---
+    type FrameRect = { x: number; y: number; w: number; h: number };
+
+    function getPreviewFrame(imageAsset: ImageAsset): FrameRect | null {
+        const s: any = (imageAsset as any).sprite;
+        if (!s) return null;
+
+        if (s.mode === 'rects' && Array.isArray(s.rects) && s.rects.length > 0) {
+            const r = s.rects[0];
+            return { x: r.x, y: r.y, w: r.w, h: r.h };
+        }
+
+        if (s.mode === 'grid' && Array.isArray(s.frameSize)) {
+            const [fw, fh] = s.frameSize;
+            const cols: number = s.grid?.cols ?? 1;
+            // frameIndex = 0 (first frame)
+            const col = 0 % cols;
+            const row = Math.floor(0 / cols);
+            return { x: col * fw, y: row * fh, w: fw, h: fh };
+        }
+
+        return null;
+    }
+
+    function spriteThumbStyle(imageAsset: ImageAsset) {
+        const frame = getPreviewFrame(imageAsset);
+        if (!frame) return '';
+
+        const { x, y, w, h } = frame;
+        // Native-size preview: container is exactly frame size
+        // Use background-position to “crop” the desired frame out of the big sheet.
+        return `
+            width: ${w}px;
+            height: ${h}px;
+            background-image: url(${imageAsset.imageUrl});
+            background-position: -${x}px -${y}px;
+            background-repeat: no-repeat;
+        `;
+    }
+
+    function isSprite(imageAsset: ImageAsset) {
+        return !!(imageAsset as any).sprite;
+    }
 </script>
 
 <style>
@@ -73,6 +117,7 @@
         display: grid;
         grid-template-columns: repeat(3, 74px);
         gap: 4px;
+        align-items: start; /* accommodate taller sprites gracefully */
     }
 
     .section-content button {
@@ -80,6 +125,10 @@
         padding: 4px;
         border: solid 1px rgba(255, 255, 255, 0.3);
         border-radius: 4px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        /* Let the button expand vertically if the frame is tall (e.g., 128px) */
     }
 
     .section-content button:hover {
@@ -90,6 +139,11 @@
         background: rgba(255, 255, 255, 0.1);
         border: solid 1px #00ffff;
         box-shadow: 0 0 10px #00ffff;
+    }
+
+    /* Ensure pixel-art <img> also looks crisp */
+    .thumb-img {
+        image-rendering: pixelated;
     }
 </style>
 
@@ -105,8 +159,15 @@
                             type="button"
                             onclick={toggleImageAsset(imageAsset)}
                             class={selectedImageAsset?.code === imageAsset.code ? 'selected' : ''}
+                            title={imageAsset.name}
                         >
-                            <img src={imageAsset.imageUrl} alt={imageAsset.name} width="64" />
+                            {#if isSprite(imageAsset)}
+                                <!-- Sprite preview: show frame 0 -->
+                                <div class="sprite-thumb" style={spriteThumbStyle(imageAsset)}></div>
+                            {:else}
+                                <!-- Static image fallback -->
+                                <img class="thumb-img" src={imageAsset.imageUrl} alt={imageAsset.name} width="64" />
+                            {/if}
                         </button>
                     {/each}
                 </div>
