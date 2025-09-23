@@ -36,9 +36,6 @@ class GameMap {
 		cols: number;
 	};
 
-	// internal time marker (optional)
-	private _lastPerfNow = 0;
-
 	constructor({
 		background,
 		target,
@@ -465,7 +462,6 @@ class GameMap {
 	 * 2) Draws entities (animated if sprite metadata exists)
 	 */
 	renderFrame(perfNow: number) {
-		this._lastPerfNow = perfNow;
 		// copy background to target (view)
 		this.sampleBackground();
 		// draw animated/dynamic entities on top
