@@ -29,12 +29,16 @@
         camera: {
             maxZoomLevel: 4,
             minZoomLevel: 0.5,
+            enableEdgeScrolling: true
+        },
+        mouse: {
+            scrollAtEdges: false
         }
     }
 
     const camera = new Camera({ eventEmitter, ...settings.camera });
     const touch = new Touch({ eventEmitter });
-    const mouse = new Mouse({ eventEmitter });
+    const mouse = new Mouse({ eventEmitter, ...settings.mouse });
     const cursor = new Cursor({ eventEmitter });
 
     const gameManager = new GameManager();

@@ -5,6 +5,7 @@ interface MouseOptions {
 	eventEmitter: InstanceType<typeof EventEmitter>;
 	mousePanning?: boolean;
 	momentum?: boolean;
+	scrollAtEdges?: boolean;
 }
 
 /* 
@@ -29,11 +30,13 @@ class Mouse {
 	dragDistance: number = 0;
 	mousePanning: boolean = true;
 	momentum: boolean = true;
+	scrollAtEdges: boolean = true; // if true, will scroll the screen when the mouse is near the edges
 	edgeThreshold: number = 10; // pixels from edge to trigger panning via the scrollScreen function
 
-	constructor({ target, eventEmitter }: MouseOptions) {
+	constructor({ target, eventEmitter, scrollAtEdges }: MouseOptions) {
 		if (target) this.target = target;
 		this.eventEmitter = eventEmitter;
+		this.scrollAtEdges = scrollAtEdges ?? this.scrollAtEdges;
 		this.onWheel = this.onWheel.bind(this);
 		this.onMouseDown = this.onMouseDown.bind(this);
 		this.onMouseMove = this.onMouseMove.bind(this);
@@ -150,7 +153,7 @@ class Mouse {
 			This performs screen scrolling when the mouse is near the edges of 
 			the screen
 		*/
-		this.scrollScreen(event);
+		if (this.scrollAtEdges) this.scrollScreen(event);
 	}
 
 	/*
