@@ -26,7 +26,8 @@
         top: 60px;
         left: 20px;
         width: 230px;
-        height: calc(100dvh - 140px);
+        min-height: inherit;
+        max-height: calc(100dvh - 140px);
         display: grid;
         background: rgba(0,0,0,0.1);
         color: white;
@@ -35,6 +36,8 @@
         box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
         border-radius: 8px;
         backdrop-filter: blur(10px);
+        grid-template-rows: 20px auto;
+        overflow: auto;
     }
 
     #sections {
