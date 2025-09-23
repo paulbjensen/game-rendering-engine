@@ -30,12 +30,14 @@
         { "code": 25, "name": "sand-corner-bottom", "type": "ground","subType": "terrain", "paintConstraint": "area", "imageUrl": "/img/assetSets/1/sand-corner-bottom.png", "width": 64, "height": 32, "size": [1,1], "anchor": [0,0] },
         { "code": 26, "name": "sand-corner-right", "type": "ground","subType": "terrain", "paintConstraint": "area", "imageUrl": "/img/assetSets/1/sand-corner-right.png", "width": 64, "height": 32, "size": [1,1], "anchor": [0,0] },
         { "code": 27, "name": "tesco-shop", "type": "entity","subType": "building", "paintConstraint": "area", "imageUrl": "/img/assetSets/1/tesco-shop.png", "width": 64, "height": 64, "size": [1,1], "anchor": [0,0] },
-        { "code": 28, "name": "park", "type": "entity","subType": "random", "paintConstraint": "single", "imageUrl": "/img/assetSets/1/park.png", "width": 128, "height": 128, "size": [2,2], "anchor": [1,1] }
+        { "code": 28, "name": "park", "type": "entity","subType": "random", "paintConstraint": "single", "imageUrl": "/img/assetSets/1/park.png", "width": 128, "height": 128, "size": [2,2], "anchor": [1,1] },
+        { "code": 29, "name": "car-white-bl", "type": "entity","subType": "vehicle", "paintConstraint": "area", "imageUrl": "/img/assetSets/1/car-white-bl.png", "width": 64, "height": 32, "size": [1,1], "anchor": [0,0] }
     ],
     "imageAssetTypes": [
         { "title": "Terrain", "subType": "terrain" },
         { "title": "Roads", "subType": "road" },
         { "title": "Buildings", "subType": "building" },
+        { "title": "Vehicles", "subType": "vehicle" },
         { "title": "Random", "subType": "random" }
     ]
 }

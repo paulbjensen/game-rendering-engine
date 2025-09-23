@@ -1,3 +1,5 @@
+import type { MapDataV2 } from "./types";
+
 /*
     A helper function to load images in the browser without needing
     to render them in the page yet
@@ -36,4 +38,22 @@ const delayUntil = (condition: () => boolean, interval: number = 100) => {
 	});
 };
 
-export { loadImage, loadJSON, imageHasLoaded, delayUntil };
+const loadMapData = async (url: string): Promise<MapDataV2> => {
+	const data = await loadJSON(url);
+	if (!data) {
+		throw new Error(`Failed to load map data from ${url}`);
+	}
+	const isVersionOne = Array.isArray(data);
+	if (isVersionOne) {
+		return {
+			ground: data,
+			version: 2,
+			entities: [],
+			imageAssetSetUrl: "/imageAssetSets/1.json",
+		};
+	} else {
+		return data;
+	}
+};
+
+export { loadImage, loadJSON, loadMapData, imageHasLoaded, delayUntil };

@@ -5,6 +5,7 @@ export interface KeyboardOptions {
 
 class Keyboard {
 	options: KeyboardOptions;
+	pauseListening: boolean = false;
 	/*
         Note - I'm using the keyboard's key rather than keyCode for the bindings,
         which is an implicit rule and currently there is no way to bind it on the 
@@ -37,11 +38,13 @@ class Keyboard {
 	}
 
 	private handleKeyDown = (event: KeyboardEvent) => {
+		if (this.pauseListening) return;
 		const action = this.options.keydown[event.key];
 		if (action) action();
 	};
 
 	private handleKeyUp = (event: KeyboardEvent) => {
+		if (this.pauseListening) return;
 		const action = this.options.keyup[event.key];
 		if (action) action();
 	};

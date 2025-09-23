@@ -155,7 +155,7 @@
         {#if currentScreen==='welcome'}
                 <img src="/img/logo.svg" alt="Babsland logo">
                 <div id="welcome-screen-options">
-                    <button onclick={() => loadScreen('new')}>Start</button>
+                    <button onclick={() => loadScreen('new')}>New Map</button>
                     <button onclick={() => loadScreen('load')}>Load Map</button>
                     <button onclick={() => loadScreen('controls')}>See Controls</button>
                     <button onclick={() => loadScreen('about')}>About</button>

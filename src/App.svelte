@@ -8,7 +8,7 @@
     import Cursor from './controls/cursor/Cursor';
     import GameMap from './GameMap';
     import type { AppMode, Entity, MapDataV2, ImageAsset } from './types';
-    import { loadJSON } from './utils';
+    import { loadJSON, loadMapData } from './utils';
 	import ImageAssetSet from './assets/ImageAssetSet';
     import Sidebar from './Sidebar.svelte';
     import TopBar from './TopBar.svelte';
@@ -24,13 +24,23 @@
     let enableFPSCounter = $state(false);
     const toggleFPSCounter = () => enableFPSCounter = !enableFPSCounter;
 
-    const camera = new Camera({ eventEmitter, maxZoomLevel: 4, minZoomLevel: 0.5 });
+    // These are settings that can be adjusted later, or configured for a specific game
+    const settings = {
+        camera: {
+            maxZoomLevel: 4,
+            minZoomLevel: 0.5,
+        }
+    }
+
+    const camera = new Camera({ eventEmitter, ...settings.camera });
     const touch = new Touch({ eventEmitter });
     const mouse = new Mouse({ eventEmitter });
     const cursor = new Cursor({ eventEmitter });
 
     const gameManager = new GameManager();
 
+    // NOTE - in the future, we want to be able to load these from an API
+    // and users who pay for the game can have access to more asset sets
     const imageAssetSets = [
         { name: 'One', url: '/imageAssetSets/1.json' },
         { name: 'Two', url: '/imageAssetSets/2.json' },
@@ -43,6 +53,8 @@
     let appMode: AppMode = $state('navigation');
     let gameName: string = $state('currentGame');
     let sections = $state<{ title: string; subType: string }[]>([]);
+
+    // We will load the 1st image asset set by default
     let imageAssetSetUrl = $state(imageAssetSets[0].url);
 
     // Toggles showing/hiding the load modal
@@ -66,36 +78,27 @@
         appMode = mode;
     };
 
+    // Used to toggle showing/hiding the welcome screen
     let hideWelcomeScreen = $state(false);
 
     // Attach the keyboard event listeners
     const keyboard = new Keyboard(keyboardOptions);
+    // TODO - move this to a place where we do it when starting a game, or loading a map
+    // and disable it when showing a modal
     keyboard.attach();
-
-    const loadMapData = async (url: string): Promise<MapDataV2> => {
-        const data = await loadJSON(url);
-        if (!data) {
-            throw new Error(`Failed to load map data from ${url}`);
-        }
-        const isVersionOne = Array.isArray(data);
-        if (isVersionOne) {
-            return { ground: data, version: 2, entities: [], imageAssetSetUrl: '/imageAssetSets/1.json' };
-        } else {
-            return data;
-        }
-    };
+    keyboard.pauseListening = true;
 
     onMount(async () => {
-
         const { ground, entities } = await loadMapData('/maps/128x128.json');
         const { imageAssetTypes, baseTileWidth, baseTileHeight, imageAssets } = await loadJSON('/imageAssetSets/1.json');
 
+        // Sections are used by the sidebar to group image assets for adding to the map
         sections = imageAssetTypes;
 
         /*
-            NOTE - when we start to load games, they may use different asset 
-            sets, so we need to design the code to be able to change image 
-            asset sets if required.
+            This loads the image assets for the game, which includes
+            the base tile width and height, as well as the individual
+            image assets that can be used in the game.
         */
         imageAssetSet = new ImageAssetSet({
             imageAssets,
@@ -211,7 +214,13 @@
         function clickOnTiles (tiles: [number, number][]) {
             if (tiles.length === 0) return;
             if (selectedImageAsset && gameMap) {
-                gameMap.clearEntitiesInArea([...tiles[0], ...tiles[tiles.length - 1]]);
+                /*
+                    Ok, so we'll need to figure out how to handle this in a 
+                    way that is more data-driven than hard-coded
+                */
+                if (selectedImageAsset.code !== 29) {
+                    gameMap.clearEntitiesInArea([...tiles[0], ...tiles[tiles.length - 1]]);
+                }
                 const rows = tiles.map(t => t[0]);
                 const columns = tiles.map(t => t[1]);
                 const minRow = Math.min(...rows);
@@ -321,6 +330,7 @@
                 camera.zoomLevel = 1;
             }
 
+            keyboard.pauseListening = false;
         }
 
         // Deletes a game
@@ -359,6 +369,7 @@
                     gameMap.draw();
                 }
             })();
+            keyboard.pauseListening = false;
             // hideWelcomeScreen = true;
         };
 

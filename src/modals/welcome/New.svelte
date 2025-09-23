@@ -56,6 +56,6 @@
     <input id="map-rows" type="number" min="1" max="128" bind:value={mapRows} />
     <label for="map-columns">Columns:</label>
     <input id="map-columns" type="number" min="1" max="128" bind:value={mapColumns} />
-    <button type="button" onclick={newGame}>Create</button>
+    <button type="button" onclick={newGame}>Start</button>
 </form>
 <button onclick={back}>Back</button>

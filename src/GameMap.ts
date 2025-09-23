@@ -384,35 +384,37 @@ class GameMap {
 		*/
 		for (let r = 0; r < this.rows; r++) {
 			for (let c = 0; c < this.columns; c++) {
-				const entity = this.entities.find(
+				const entities = this.entities.filter(
 					(e) => e.anchor[0] === r && e.anchor[1] === c,
 				);
-				if (!entity) continue;
-				const tile = this.imageAssetSet.imageAssets.find(
-					(t) => t.code === entity.code,
-				);
-				if (!tile?.image) continue;
+				if (entities.length === 0) continue;
+				for (const entity of entities) {
+					const tile = this.imageAssetSet.imageAssets.find(
+						(t) => t.code === entity.code,
+					);
+					if (!tile?.image) continue;
 
-				const { wx, wy } = rcToWorldTopLeft(
-					entity.anchor[0],
-					entity.anchor[1],
-					metrics,
-					bounds,
-				);
-				const x = wx + (W - tile.width) / 2;
-				const y = wy - (tile.height - H);
+					const { wx, wy } = rcToWorldTopLeft(
+						entity.anchor[0],
+						entity.anchor[1],
+						metrics,
+						bounds,
+					);
+					const x = wx + (W - tile.width) / 2;
+					const y = wy - (tile.height - H);
 
-				ctx.drawImage(
-					tile.image,
-					0,
-					0,
-					tile.width,
-					tile.height,
-					x,
-					y,
-					tile.width,
-					tile.height,
-				);
+					ctx.drawImage(
+						tile.image,
+						0,
+						0,
+						tile.width,
+						tile.height,
+						x,
+						y,
+						tile.width,
+						tile.height,
+					);
+				}
 			}
 		}
 
