@@ -19,7 +19,6 @@
     import keyboardOptions from './config/keyboardOptions';
     import FPSCounter from './lib/fpsCounter/FPSCounter.svelte';
     import inputDetector from './inputDetector';
-	import app from './main';
     
     // Used to toggle the FPSCounter component via keyboard controls
     let enableFPSCounter = $state(false);
