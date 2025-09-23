@@ -53,4 +53,4 @@ export type MapDataV2 = {
 	zoomLevel?: number;
 };
 
-export type AppMode = "navigation" | "edit";
+export type AppMode = "modal" | "navigation" | "edit";

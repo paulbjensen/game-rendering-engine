@@ -1,5 +1,5 @@
 <script lang="ts">
-    const { appMode, eventEmitter } = $props();
+    const { appMode, eventEmitter, hidden } = $props();
 
     const directions = $state<string[]>([]);
 
@@ -125,10 +125,12 @@
     }
 </style>
 
-<div id="topbar">
-    <button class:selected={appMode === 'navigation'} onclick={() => eventEmitter.emit('setAppMode', 'navigation')}>Navigation</button>
-    <button class:selected={appMode === 'edit'} onclick={() => eventEmitter.emit('setAppMode', 'edit')}>Editor</button>
-</div>
+{#if !hidden}
+    <div id="topbar">
+        <button class:selected={appMode === 'navigation'} onclick={() => eventEmitter.emit('setAppMode', 'navigation')}>Navigation</button>
+        <button class:selected={appMode === 'edit'} onclick={() => eventEmitter.emit('setAppMode', 'edit')}>Editor</button>
+    </div>
+{/if}
 
 {#if appMode === 'navigation'}
     <div id="recenter-bar">

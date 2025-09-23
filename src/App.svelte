@@ -19,6 +19,7 @@
     import keyboardOptions from './config/keyboardOptions';
     import FPSCounter from './lib/fpsCounter/FPSCounter.svelte';
     import inputDetector from './inputDetector';
+	import app from './main';
     
     // Used to toggle the FPSCounter component via keyboard controls
     let enableFPSCounter = $state(false);
@@ -50,7 +51,7 @@
     let gameMap: GameMap | null = null;
     let imageAssetSet: ImageAssetSet | null = $state(null);
     let selectedImageAsset: ImageAsset | null = $state(null);
-    let appMode: AppMode = $state('navigation');
+    let appMode: AppMode = $state('modal');
     let gameName: string = $state('currentGame');
     let sections = $state<{ title: string; subType: string }[]>([]);
 
@@ -331,6 +332,8 @@
             }
 
             keyboard.pauseListening = false;
+            appMode = 'navigation';
+
         }
 
         // Deletes a game
@@ -370,6 +373,7 @@
                 }
             })();
             keyboard.pauseListening = false;
+            appMode = 'navigation';
             // hideWelcomeScreen = true;
         };
 
@@ -458,7 +462,7 @@
     {#if imageAssetSet}
         <Sidebar {sections} {imageAssetSet} {eventEmitter} {selectedImageAsset} hidden={appMode !== "edit"} />
     {/if}
-    <TopBar {appMode} {eventEmitter} />
+    <TopBar {appMode} {eventEmitter} hidden={appMode === 'modal'} />
     {#if !hideWelcomeScreen}
         <WelcomeScreen {gameManager} {imageAssetSets} {eventEmitter} hide={() => hideWelcomeScreen = true} />
     {/if}
