@@ -33,7 +33,7 @@
             enableEdgeScrolling: true
         },
         mouse: {
-            scrollAtEdges: false
+            scrollAtEdges: false // Turned this off because it was sort of annoying when you wanted to move your mouse out of the window - perhaps a delay of say 500ms-1000ms would help?
         }
     }
 
@@ -148,8 +148,6 @@
             backgroundCanvas.width  = Math.ceil((gameMap.rows + gameMap.columns) * W / 2);
             backgroundCanvas.height = Math.ceil((gameMap.rows + gameMap.columns) * H / 2 + (Hmax - H));
 
-            // backgroundCanvas.width = gameMap.columns * imageAssetSet!.baseTileWidth;
-            // backgroundCanvas.height = gameMap.rows * imageAssetSet!.baseTileHeight;
             const canvasElements = [mapCanvas, cursorCanvas];
             canvasElements.forEach(canvas => {
                 canvas.width = window.innerWidth;
@@ -233,15 +231,12 @@
                 };
 
                 /*
+                    If an image asset has a stack property set to true, then we allow
+                    it to be placed on top of other entities, rather than clearing them.
 
-                    NOTE - implement a data-driven way to handle tile application rules (overwrite, stack, etc)
-
-                    Ok, so we'll need to figure out how to handle this in a 
-                    way that is more data-driven than hard-coded
-
-                    This is the car tile - I want to be able to place it on top of a road tile
+                    An example of this is cars, where you might want to have a car on a road.
                 */
-                if (selectedImageAsset.code !== 29) {
+                if (!selectedImageAsset.stack) {
                     gameMap.clearEntitiesInArea([...tiles[0], ...tiles[tiles.length - 1]]);
                 }
                 const rows = tiles.map(t => t[0]);
@@ -272,8 +267,6 @@
                     ground: gameMap.ground,
                     entities: gameMap.entities
                 };
-
-                // console.log({ before, after });
 
                 mapEventHistory.addEvent({
                     type: 'clickBatch',
@@ -494,6 +487,7 @@
         await gameMap?.load();
         resizeCanvases();
 
+        // This handles the animation frame rendering loop
         let rafId = 0;
         function tick(now: number) {
             gameMap?.renderFrame(now);

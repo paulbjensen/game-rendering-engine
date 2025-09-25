@@ -16,7 +16,7 @@
         { "code": 11, "name": "sand", "type": "ground","subType": "terrain", "paintConstraint": "area", "imageUrl": "/img/assetSets/1/sand.png", "width": 64, "height": 32, "size": [1,1], "anchor": [0,0] },
         { "code": 12, "name": "english-townhouse", "type": "entity","subType": "building", "paintConstraint": "area", "imageUrl": "/img/assetSets/1/english-townhouse.png", "width": 64, "height": 128, "size": [1,1], "anchor": [0,0] },
         { "code": 13, "name": "cornershop", "type": "entity","subType": "building", "paintConstraint": "area", "imageUrl": "/img/assetSets/1/cornershop.png", "width": 64, "height": 64, "size": [1,1], "anchor": [0,0] },
-        { "code": 14, "name": "house", "type": "entity","subType": "building", "paintConstraint": "area", "imageUrl": "/img/assetSets/1/house.png", "width": 64, "height": 64, "size": [1,1], "anchor": [0,0] },
+        { "code": 14, "name": "house-bl", "type": "entity","subType": "building", "paintConstraint": "area", "imageUrl": "/img/assetSets/1/house-bl.png", "width": 64, "height": 64, "size": [1,1], "anchor": [0,0] },
         { "code": 15, "name": "road-corner-top", "type": "entity","subType": "road", "paintConstraint": "diagonal", "imageUrl": "/img/assetSets/1/road-corner-top.png", "width": 64, "height": 32, "size": [1,1], "anchor": [0,0] },
         { "code": 16, "name": "road-corner-left", "type": "entity","subType": "road", "paintConstraint": "diagonal", "imageUrl": "/img/assetSets/1/road-corner-left.png", "width": 64, "height": 32, "size": [1,1], "anchor": [0,0] },
         { "code": 17, "name": "road-corner-bottom", "type": "entity","subType": "road", "paintConstraint": "diagonal", "imageUrl": "/img/assetSets/1/road-corner-bottom.png", "width": 64, "height": 32, "size": [1,1], "anchor": [0,0] },
@@ -31,7 +31,7 @@
         { "code": 26, "name": "sand-corner-right", "type": "ground","subType": "terrain", "paintConstraint": "area", "imageUrl": "/img/assetSets/1/sand-corner-right.png", "width": 64, "height": 32, "size": [1,1], "anchor": [0,0] },
         { "code": 27, "name": "tesco-shop", "type": "entity","subType": "building", "paintConstraint": "area", "imageUrl": "/img/assetSets/1/tesco-shop.png", "width": 64, "height": 64, "size": [1,1], "anchor": [0,0] },
         { "code": 28, "name": "park", "type": "entity","subType": "random", "paintConstraint": "single", "imageUrl": "/img/assetSets/1/park.png", "width": 128, "height": 128, "size": [2,2], "anchor": [1,1] },
-        { "code": 29, "name": "car-white-bl", "type": "entity","subType": "vehicle", "paintConstraint": "area", "imageUrl": "/img/assetSets/1/car-white-bl.png", "width": 64, "height": 32, "size": [1,1], "anchor": [0,0] },
+        { "code": 29, "name": "car-white-bl", "type": "entity","subType": "vehicle", "paintConstraint": "area", "imageUrl": "/img/assetSets/1/car-white-bl.png", "width": 64, "height": 32, "size": [1,1], "anchor": [0,0], "stack": true },
         {
             "code": 30,
             "name": "wind-turbine-all",
@@ -53,7 +53,11 @@
                 },
                 "defaultAnimation": "spin"
             }
-        }
+        },
+        { "code": 31, "name": "car-white-br", "type": "entity","subType": "vehicle", "paintConstraint": "area", "imageUrl": "/img/assetSets/1/car-white-br.png", "width": 64, "height": 32, "size": [1,1], "anchor": [0,0], "stack": true },
+        { "code": 32, "name": "house", "type": "entity","subType": "building", "paintConstraint": "area", "imageUrl": "/img/assetSets/1/house-br.png", "width": 64, "height": 64, "size": [1,1], "anchor": [0,0], "stack": true },
+        { "code": 33, "name": "tree-paul", "type": "entity","subType": "terrain", "paintConstraint": "area", "imageUrl": "/img/assetSets/1/tree-paul.png", "width": 64, "height": 64, "size": [1,1], "anchor": [0,0] }
+    
     ],
     "imageAssetTypes": [
         { "title": "Terrain", "subType": "terrain" },

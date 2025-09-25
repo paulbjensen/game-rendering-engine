@@ -54,6 +54,7 @@ export type ImageAsset = {
 	size: [number, number];
 	anchor: [number, number];
 	sprite?: SpriteMeta; // NEW
+	stack?: boolean; // NEW - if true, allows stacking of multiple instances on same tile
 };
 
 export type Entity = {
