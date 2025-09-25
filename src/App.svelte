@@ -19,6 +19,7 @@
     import keyboardOptions from './config/keyboardOptions';
     import FPSCounter from './lib/fpsCounter/FPSCounter.svelte';
     import inputDetector from './inputDetector';
+    import History from './lib/history/History';
     
     // Used to toggle the FPSCounter component via keyboard controls
     let enableFPSCounter = $state(false);
@@ -40,6 +41,8 @@
     const touch = new Touch({ eventEmitter });
     const mouse = new Mouse({ eventEmitter, ...settings.mouse });
     const cursor = new Cursor({ eventEmitter });
+
+    let mapEventHistory = new History();
 
     const gameManager = new GameManager();
 
@@ -217,9 +220,26 @@
         function clickOnTiles (tiles: [number, number][]) {
             if (tiles.length === 0) return;
             if (selectedImageAsset && gameMap) {
+                
+                // NOTE - implementing full copy for now, will later implement a more memory-efficient snapshot approach later
+                const before = {
+                    ground: structuredClone(gameMap.ground),
+                    /*
+                        We can't use structuredClone here as the entities are class instances,
+                        but interestingly it does make a copy of the state before the change,
+                        rather than pointing to a reference of the value 
+                    */
+                    entities: gameMap.entities
+                };
+
                 /*
+
+                    NOTE - implement a data-driven way to handle tile application rules (overwrite, stack, etc)
+
                     Ok, so we'll need to figure out how to handle this in a 
                     way that is more data-driven than hard-coded
+
+                    This is the car tile - I want to be able to place it on top of a road tile
                 */
                 if (selectedImageAsset.code !== 29) {
                     gameMap.clearEntitiesInArea([...tiles[0], ...tiles[tiles.length - 1]]);
@@ -247,6 +267,20 @@
                         gameMap.addEntity({ position: tile, imageAsset: selectedImageAsset });
                     }
                 }
+
+                const after = {
+                    ground: gameMap.ground,
+                    entities: gameMap.entities
+                };
+
+                // console.log({ before, after });
+
+                mapEventHistory.addEvent({
+                    type: 'clickBatch',
+                    before,
+                    after
+                });
+
                 gameMap.drawBackground();
                 gameMap.draw();
             }
@@ -335,6 +369,7 @@
 
             keyboard.pauseListening = false;
             appMode = 'navigation';
+            mapEventHistory = new History();
 
         }
 
@@ -375,6 +410,7 @@
                 }
             })();
             keyboard.pauseListening = false;
+            mapEventHistory = new History();
             appMode = 'navigation';
             // hideWelcomeScreen = true;
         };
@@ -397,6 +433,34 @@
 
         function showTheSaveModal() {
             showSaveModal = true;
+        }
+
+        function undo() {
+            const event = mapEventHistory.undo();
+            if (event && gameMap) {
+                if (event.before.ground) {
+                    gameMap.updateGround(event.before.ground);
+                }
+                if (event.before.entities) {
+                    gameMap.updateEntities(event.before.entities);
+                }
+                gameMap.drawBackground();
+                gameMap.draw();
+            }
+        }
+
+        function redo() {
+            const event = mapEventHistory.redo();
+            if (event && gameMap) {
+                if (event.after.ground) {
+                    gameMap.updateGround(event.after.ground);
+                }
+                if (event.after.entities) {
+                    gameMap.updateEntities(event.after.entities);
+                }
+                gameMap.drawBackground();
+                gameMap.draw();
+            }
         }
 
         // EventEmitter bindings
@@ -422,6 +486,9 @@
         eventEmitter.on('showLoadModal', showTheLoadModal);
         eventEmitter.on('showSaveModal', showTheSaveModal);
         eventEmitter.on("inputCapabilitiesChanged", showOrHideCursor);
+        eventEmitter.on('undo', undo);
+        eventEmitter.on('redo', redo);
+
 
         // Load map assets then resize the canvas once loaded
         await gameMap?.load();

@@ -124,7 +124,7 @@ class GameMap {
 
 	// Updates the entities
 	updateEntities(entities: Entity[]) {
-		this.entities = structuredClone(entities);
+		this.entities = entities;
 	}
 
 	getMapCoords() {

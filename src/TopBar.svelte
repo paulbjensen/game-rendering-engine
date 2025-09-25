@@ -67,5 +67,8 @@
         <button onclick={() => eventEmitter.emit('zoomOut')}>-</button>
         <button onclick={() => eventEmitter.emit('resetZoom')}>Reset</button>
         <button onclick={() => eventEmitter.emit('zoomIn')}>+</button>
+        <div class="divider">|</div>
+        <button onclick={() => eventEmitter.emit('undo')}>Undo</button>
+        <button onclick={() => eventEmitter.emit('redo')}>Redo</button>
     </div>
 {/if}
