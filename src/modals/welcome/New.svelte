@@ -6,13 +6,36 @@
     let name = $state('My Map');
     let selectedImageAssetSet = $state(imageAssetSets[0].url);
 
-    let mapRows = $state(128);
-    let mapColumns = $state(128);
+    let mapRows = $state(256);
+    let mapColumns = $state(256);
+
+    let maxRows = $state(256);
+    let maxColumns = $state(256);
 
     function newGame() {
         eventEmitter.emit('newGame', { name, imageAssetSetUrl: selectedImageAssetSet, mapRows, mapColumns });
         hide();
     }
+
+    function updateMaxRowAndColumnSizes() {
+        const imageAssetSet = imageAssetSets.find(ias => ias.url === selectedImageAssetSet);
+        if (imageAssetSet) {
+            maxRows = imageAssetSet.maxRows;
+            maxColumns = imageAssetSet.maxColumns;
+            if (mapRows > maxRows) mapRows = maxRows;
+            if (mapColumns > maxColumns) mapColumns = maxColumns;
+        }        
+    }
+
+    /*
+        TODO - you will need to limit the number of rows/columns based on the 
+        image asset set chosen as well, as there is a hard limit of the 
+        number of pixels that a canvas can be: 268435456 pixels
+
+        16,384 × 16,384 (16,384 is 256 * 64)
+
+        So for an asset image set with 128x64 tiles, the max map size is 128x128 tiles.
+    */
 </script>
 
 <style>
@@ -47,15 +70,15 @@
     <label for="map-name">Map Name:</label>
     <input id="map-name" type="text" bind:value={name} />
     <label for="image-asset-set">Tileset:</label>
-    <select id="image-asset-set" bind:value={selectedImageAssetSet}>
+    <select id="image-asset-set" bind:value={selectedImageAssetSet} onchange={updateMaxRowAndColumnSizes}>
         {#each imageAssetSets as imageAssetSet}
             <option value={imageAssetSet.url}>{imageAssetSet.name}</option>
         {/each}
     </select>
     <label for="map-rows">Rows:</label>
-    <input id="map-rows" type="number" min="1" max="128" bind:value={mapRows} />
+    <input id="map-rows" type="number" min="1" max={maxRows} bind:value={mapRows} />
     <label for="map-columns">Columns:</label>
-    <input id="map-columns" type="number" min="1" max="128" bind:value={mapColumns} />
+    <input id="map-columns" type="number" min="1" max={maxColumns} bind:value={mapColumns} />
     <button type="button" onclick={newGame}>Start</button>
 </form>
 <button onclick={back}>Back</button>
