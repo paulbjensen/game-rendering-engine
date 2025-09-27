@@ -492,41 +492,29 @@
             showSaveModal = true;
         }
 
-        /* This handles performing an undo function */
-        function undo() {
-            const event = mapEventHistory.undo();
-            if (event && gameMap) {
-                if (event.before.ground) {
-                    gameMap.updateGround(event.before.ground);
-                }
-                if (event.before.entities) {
-                    gameMap.updateEntities(event.before.entities);
-                }
-
-                // NOTE - maybe we DRY up the 2 calls into 1 function call?
+        /* This function will handle both undo and redo actions */
+        function undoOrRedo(action:'undo' | 'redo') {
+            const eventState = action === 'undo' ? 'before' : 'after';
+            const event = mapEventHistory[action]();
+            const state = event ? event[eventState] : null;
+            if (state && gameMap) {
+                state.ground && gameMap.updateGround(state.ground);
+                state.entities && gameMap.updateEntities(state.entities);
                 gameMap.drawBackground();
                 gameMap.draw();
             }
         }
 
+        /* This handles performing an undo function */
+        function undo() {
+            undoOrRedo('undo');
+        }
+
         /*
             This handles performing an undo function
-
-            NOTE - This looks like it could be DRYed up with the undo function above
         */
         function redo() {
-            const event = mapEventHistory.redo();
-            if (event && gameMap) {
-                if (event.after.ground) {
-                    gameMap.updateGround(event.after.ground);
-                }
-                if (event.after.entities) {
-                    gameMap.updateEntities(event.after.entities);
-                }
-                // NOTE - maybe we DRY up the 2 calls into 1 function call?
-                gameMap.drawBackground();
-                gameMap.draw();
-            }
+            undoOrRedo('redo');
         }
 
         // EventEmitter bindings
