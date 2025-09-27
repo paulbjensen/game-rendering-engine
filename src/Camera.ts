@@ -6,7 +6,7 @@ class Camera {
 	panX: number;
 	panY: number;
 	activePanningDirections: Direction[];
-	panningInterval: ReturnType<typeof setInterval> | null;
+	isPanning: boolean = false;
 	eventEmitter: InstanceType<typeof EventEmitter>;
 	maxZoomLevel: number | null;
 	minZoomLevel: number | null;
@@ -28,8 +28,6 @@ class Camera {
 		this.minZoomLevel = minZoomLevel || null;
 		this.panX = 0;
 		this.panY = 0;
-		/* Used to track if we are panning */
-		this.panningInterval = null;
 		/*
             Used to track the directions in which the camera will pan.
 
@@ -268,6 +266,7 @@ class Camera {
 		Applies panning based on the currently active panning directions.
 	*/
 	applyPanning() {
+		if (!this.isPanning) return;
 		const panSpeed = 10; // Adjust the panning speed as needed
 
 		for (const dir of this.activePanningDirections) {
@@ -289,15 +288,13 @@ class Camera {
 			panY: this.panY,
 			zoomLevel: this.zoomLevel,
 		});
+		requestAnimationFrame(this.applyPanning);
 	}
 
 	/*
 	 * Start panning in a specific direction
 	 * @param {string} direction - The direction to pan ('left', 'right', 'up', 'down')
-	 * This function starts an interval that pans the map in the specified direction.
-	 * If the interval is already running, it will not start a new one.
-	 *
-	 * // TODO - implement use of requestAnimationFrame instead of setInterval
+	 * This function makes a call that pans the map in the specified direction.
 	 */
 	startPanning(direction: Direction) {
 		// Don't trigger if already panning in that direction
@@ -305,14 +302,16 @@ class Camera {
 		// Add the direction to the list of active directions
 		this.activePanningDirections.push(direction);
 
-		if (!this.panningInterval) {
-			this.panningInterval = setInterval(this.applyPanning, 1000 / 60);
+		if (!this.isPanning) {
+			this.isPanning = true;
+			requestAnimationFrame(this.applyPanning);
 		}
 	}
 
 	/* Stop panning in a specific direction
 	 * @param {string} direction - The direction to stop panning ('left', 'right', 'up', 'down')
-	 * This function stops the panning interval for the specified direction.
+	 * This function stops the panning for the specified direction.
+	 * If no directions are left, it stops the panning entirely.
 	 */
 	stopPanning(direction: Direction) {
 		const index = this.activePanningDirections.indexOf(direction);
@@ -320,8 +319,7 @@ class Camera {
 			this.activePanningDirections.splice(index, 1);
 		}
 		if (this.activePanningDirections.length === 0) {
-			if (this.panningInterval) clearInterval(this.panningInterval);
-			this.panningInterval = null;
+			this.isPanning = false;
 		}
 	}
 }
