@@ -7,8 +7,8 @@
     import Mouse from './controls/Mouse';
     import Cursor from './controls/cursor/Cursor';
     import GameMap from './GameMap';
-    import type { AppMode, Entity, MapDataV2, ImageAsset, ImageAssetSetOption } from './types';
-    import { loadJSON, loadMapData } from './utils';
+    import type { AppMode, Entity, MapData, MapDataV2, ImageAsset, ImageAssetSetOption } from './types';
+    import { loadJSON } from './utils';
 	import ImageAssetSet from './assets/ImageAssetSet';
     import Sidebar from './Sidebar.svelte';
     import TopBar from './TopBar.svelte';
@@ -496,7 +496,7 @@
         function undoOrRedo(action:'undo' | 'redo') {
             const eventState = action === 'undo' ? 'before' : 'after';
             const event = mapEventHistory[action]();
-            const state = event ? event[eventState] : null;
+            const state = event ? event[eventState] as { ground?: MapData; entities?: Entity[] } : null;
             if (state && gameMap) {
                 state.ground && gameMap.updateGround(state.ground);
                 state.entities && gameMap.updateEntities(state.entities);
