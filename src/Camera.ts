@@ -47,6 +47,7 @@ class Camera {
 		this.resetZoomWithSmoothing = this.resetZoomWithSmoothing.bind(this);
 		this.addPan = this.addPan.bind(this);
 		this.setZoom = this.setZoom.bind(this);
+		this.applyPanning = this.applyPanning.bind(this);
 	}
 
 	/*
@@ -264,6 +265,33 @@ class Camera {
 	}
 
 	/*
+		Applies panning based on the currently active panning directions.
+	*/
+	applyPanning() {
+		const panSpeed = 10; // Adjust the panning speed as needed
+
+		for (const dir of this.activePanningDirections) {
+			if (dir === "left") {
+				this.panX += panSpeed;
+			} else if (dir === "right") {
+				this.panX -= panSpeed;
+			} else if (dir === "up") {
+				// We move 1/2 the speed in the y direction because
+				// then when we do diagonal scrolling, it matches the
+				// isometric tile ratio better.
+				this.panY += panSpeed / 2;
+			} else if (dir === "down") {
+				this.panY -= panSpeed / 2;
+			}
+		}
+		this.eventEmitter.emit("cameraUpdated", {
+			panX: this.panX,
+			panY: this.panY,
+			zoomLevel: this.zoomLevel,
+		});
+	}
+
+	/*
 	 * Start panning in a specific direction
 	 * @param {string} direction - The direction to pan ('left', 'right', 'up', 'down')
 	 * This function starts an interval that pans the map in the specified direction.
@@ -274,36 +302,11 @@ class Camera {
 	startPanning(direction: Direction) {
 		// Don't trigger if already panning in that direction
 		if (this.activePanningDirections.includes(direction)) return;
-		const panSpeed = 10; // Adjust the panning speed as needed
+		// Add the direction to the list of active directions
 		this.activePanningDirections.push(direction);
 
 		if (!this.panningInterval) {
-			this.panningInterval = setInterval(() => {
-				for (const dir of this.activePanningDirections) {
-					if (dir === "left") {
-						this.panX += panSpeed;
-					} else if (dir === "right") {
-						this.panX -= panSpeed;
-					} else if (dir === "up") {
-						// We move 1/2 the speed in the y direction because
-						// then when we do diagonal scrolling, it matches the
-						// isometric tile ratio better.
-						this.panY += panSpeed / 2;
-					} else if (dir === "down") {
-						this.panY -= panSpeed / 2;
-					}
-				}
-				this.eventEmitter.emit("cameraUpdated", {
-					panX: this.panX,
-					panY: this.panY,
-					zoomLevel: this.zoomLevel,
-				});
-				/*
-                     NOTE - we assume the hooks complete before the next call 
-                     in the loop is executed - nothing here prevents it from 
-                     running on beyond the next frame call.
-                */
-			}, 1000 / 60);
+			this.panningInterval = setInterval(this.applyPanning, 1000 / 60);
 		}
 	}
 
