@@ -20,6 +20,7 @@
     import FPSCounter from './lib/fpsCounter/FPSCounter.svelte';
     import inputDetector from './inputDetector';
     import History from './lib/history/History';
+	import GameScreen from './GameScreen.svelte';
     
     // Used to toggle the FPSCounter component via keyboard controls
     let enableFPSCounter = $state(false);
@@ -568,28 +569,9 @@
     });
 </script>
 
-<style>
-    #map, #cursor {
-        position:absolute;
-        top: 0px;
-        left: 0px;
-        cursor: move;
-        width:100vw;
-        height:100dvh;
-    }
-
-    #background {
-        display: none;
-    }
-</style>
-
 <main>
     <FPSCounter show={enableFPSCounter} />
-    <div id="game">
-        <canvas id="background"></canvas>
-        <canvas id="map"></canvas>
-        <canvas id="cursor"></canvas>
-    </div>
+    <GameScreen />
     {#if imageAssetSet}
         <Sidebar {sections} {imageAssetSet} {eventEmitter} {selectedImageAsset} hidden={appMode !== "edit"} />
     {/if}
