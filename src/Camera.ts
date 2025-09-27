@@ -73,11 +73,17 @@ class Camera {
 	}
 
 	zoomIn() {
-		this.setZoom(this.zoomLevel * 1.1);
+		const targetZoom = this.zoomLevel * 1.1;
+		if (this.maxZoomLevel && targetZoom <= this.maxZoomLevel) {
+			this.resetZoomWithSmoothing({ targetZoom, duration: 100 });
+		}
 	}
 
 	zoomOut() {
-		this.setZoom(this.zoomLevel / 1.1);
+		const targetZoom = this.zoomLevel / 1.1;
+		if (this.minZoomLevel && targetZoom >= this.minZoomLevel) {
+			this.resetZoomWithSmoothing({ targetZoom, duration: 100 });
+		}
 	}
 
 	/*
