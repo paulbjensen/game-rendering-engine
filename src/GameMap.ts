@@ -620,7 +620,6 @@ class GameMap {
 					: frames.length - 1 - (step - (frames.length - 1));
 				return this.frameIndexToRect(sprite, frames[i]);
 			}
-			case "loop":
 			default: {
 				const idx = Math.floor(elapsed / per) % frames.length;
 				return this.frameIndexToRect(sprite, frames[idx]);
