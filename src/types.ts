@@ -22,20 +22,35 @@ export type SpriteAnimation = {
 	loop: SpriteLoop;
 };
 
-export type SpriteMeta =
-	| {
-			mode: "grid";
-			frameSize: [number, number];
-			grid: { rows: number; cols: number; order?: "row-major" | "col-major" };
-			animations: Record<string, SpriteAnimation>;
-			defaultAnimation: string;
-	  }
-	| {
-			mode: "rects";
-			rects: { x: number; y: number; w: number; h: number }[];
-			animations: Record<string, SpriteAnimation>;
-			defaultAnimation: string;
-	  };
+export type GridSpriteMeta = {
+	mode: "grid";
+	frameSize: [number, number];
+	grid: { rows: number; cols: number; order?: "row-major" | "col-major" };
+	animations: Record<string, SpriteAnimation>;
+	defaultAnimation: string;
+};
+
+export type RectsSpriteMeta = {
+	mode: "rects";
+	rects: { x: number; y: number; w: number; h: number }[];
+	animations: Record<string, SpriteAnimation>;
+	defaultAnimation: string;
+};
+
+export type SpriteMeta = GridSpriteMeta | RectsSpriteMeta;
+// | {
+// 		mode: "grid";
+// 		frameSize: [number, number];
+// 		grid: { rows: number; cols: number; order?: "row-major" | "col-major" };
+// 		animations: Record<string, SpriteAnimation>;
+// 		defaultAnimation: string;
+//   }
+// | {
+// 		mode: "rects";
+// 		rects: { x: number; y: number; w: number; h: number }[];
+// 		animations: Record<string, SpriteAnimation>;
+// 		defaultAnimation: string;
+//   };
 
 export type ImageAssetType = "ground" | "entity";
 

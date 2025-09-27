@@ -8,7 +8,14 @@ import {
 	snapped,
 	worldToScreen,
 } from "./lib/viewport/viewport";
-import type { Entity, ImageAsset, MapData } from "./types";
+import type {
+	Entity,
+	GridSpriteMeta,
+	ImageAsset,
+	MapData,
+	RectsSpriteMeta,
+	SpriteMeta,
+} from "./types";
 import { delayUntil, imageHasLoaded } from "./utils";
 
 class GameMap {
@@ -164,8 +171,6 @@ class GameMap {
 		const tfSnap = snapped(tf);
 
 		if (!this._metrics || !this._bounds) return;
-
-		const { W, H } = this._metrics;
 
 		// Footprint in tiles (rows x cols)
 		const rTiles = imageAsset?.size?.[0] ?? 1;
@@ -547,21 +552,21 @@ class GameMap {
 		entity: Entity,
 		perfNow: number,
 	) {
-		const sprite = asset.sprite as NonNullable<ImageAsset["sprite"]>;
+		const sprite = asset.sprite as SpriteMeta;
 		const defaultAnimName =
-			(sprite as any)?.defaultAnimation ??
-			Object.keys((sprite as any)?.animations ?? {})[0];
+			(sprite as SpriteMeta)?.defaultAnimation ??
+			Object.keys((sprite as SpriteMeta)?.animations ?? {})[0];
 		const animName = entity.animationName ?? defaultAnimName;
 
 		const anim =
-			(sprite as any)?.animations?.[animName] ??
-			(sprite as any)?.animations?.[defaultAnimName];
+			(sprite as SpriteMeta)?.animations?.[animName] ??
+			(sprite as SpriteMeta)?.animations?.[defaultAnimName];
 
 		// Fallback if no animation config is present
 		if (!anim) {
 			// Use first frame of grid/rects
-			if ((sprite as any).mode === "rects") {
-				const r = (sprite as any).rects?.[0] ?? {
+			if ((sprite as SpriteMeta).mode === "rects") {
+				const r = (sprite as RectsSpriteMeta).rects?.[0] ?? {
 					x: 0,
 					y: 0,
 					w: asset.width,
@@ -569,7 +574,10 @@ class GameMap {
 				};
 				return { sx: r.x, sy: r.y, sw: r.w, sh: r.h };
 			}
-			const [fw, fh] = (sprite as any).frameSize ?? [asset.width, asset.height];
+			const [fw, fh] = (sprite as GridSpriteMeta).frameSize ?? [
+				asset.width,
+				asset.height,
+			];
 			return { sx: 0, sy: 0, sw: fw, sh: fh };
 		}
 
@@ -629,7 +637,7 @@ class GameMap {
 		sprite: NonNullable<ImageAsset["sprite"]>,
 		frameIndex: number,
 	) {
-		const s: any = sprite;
+		const s: SpriteMeta = sprite;
 
 		if (s.mode === "rects") {
 			const r = s.rects?.[frameIndex] ??
