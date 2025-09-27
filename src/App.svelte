@@ -7,7 +7,7 @@
     import Mouse from './controls/Mouse';
     import Cursor from './controls/cursor/Cursor';
     import GameMap from './GameMap';
-    import type { AppMode, Entity, MapDataV2, ImageAsset } from './types';
+    import type { AppMode, Entity, MapDataV2, ImageAsset, ImageAssetSetOption } from './types';
     import { loadJSON, loadMapData } from './utils';
 	import ImageAssetSet from './assets/ImageAssetSet';
     import Sidebar from './Sidebar.svelte';
@@ -48,7 +48,7 @@
 
     // NOTE - in the future, we want to be able to load these from an API
     // and users who pay for the game can have access to more asset sets
-    const imageAssetSets = [
+    const imageAssetSets: ImageAssetSetOption[] = [
         { name: 'One', url: '/imageAssetSets/1.json', maxRows: 256, maxColumns: 256 },
         { name: 'Two', url: '/imageAssetSets/2.json', maxRows: 256, maxColumns: 256 },
         { name: 'Three', url: '/imageAssetSets/3.json', maxRows: 128, maxColumns: 128 },

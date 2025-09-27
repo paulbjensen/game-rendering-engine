@@ -1,6 +1,6 @@
 <script lang="ts">
+    import type { ImageAssetSetOption } from '../../types';
     const { hide, back, eventEmitter, imageAssetSets } = $props();
-
 
     // This feels like config that would be loaded from somewhere else
     let name = $state('My Map');
@@ -17,8 +17,9 @@
         hide();
     }
 
+
     function updateMaxRowAndColumnSizes() {
-        const imageAssetSet = imageAssetSets.find(ias => ias.url === selectedImageAssetSet);
+        const imageAssetSet = imageAssetSets.find((ias: ImageAssetSetOption) => ias.url === selectedImageAssetSet);
         if (imageAssetSet) {
             maxRows = imageAssetSet.maxRows;
             maxColumns = imageAssetSet.maxColumns;

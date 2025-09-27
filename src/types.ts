@@ -57,6 +57,13 @@ export type ImageAsset = {
 	stack?: boolean; // NEW - if true, allows stacking of multiple instances on same tile
 };
 
+export type ImageAssetSetOption = {
+	name: string;
+	url: string;
+	maxRows: number;
+	maxColumns: number;
+};
+
 export type Entity = {
 	id: string; // Each entity gets a unique ID for its instance
 	code: number; // This is the code for the image asset used to render it
