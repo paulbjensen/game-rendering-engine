@@ -56,8 +56,15 @@
         },
         { "code": 31, "name": "car-white-br", "type": "entity","subType": "vehicle", "paintConstraint": "area", "imageUrl": "/img/assetSets/1/car-white-br.png", "width": 64, "height": 32, "size": [1,1], "anchor": [0,0], "stack": true },
         { "code": 32, "name": "house", "type": "entity","subType": "building", "paintConstraint": "area", "imageUrl": "/img/assetSets/1/house-br.png", "width": 64, "height": 64, "size": [1,1], "anchor": [0,0], "stack": true },
-        { "code": 33, "name": "tree-paul", "type": "entity","subType": "terrain", "paintConstraint": "area", "imageUrl": "/img/assetSets/1/tree-paul.png", "width": 64, "height": 64, "size": [1,1], "anchor": [0,0] }
-    
+        { "code": 33, "name": "tree-paul", "type": "entity","subType": "terrain", "paintConstraint": "area", "imageUrl": "/img/assetSets/1/tree-paul.png", "width": 64, "height": 64, "size": [1,1], "anchor": [0,0] },
+        { "code": 34, "name": "pavement-tr", "type": "entity","subType": "road", "paintConstraint": "area", "imageUrl": "/img/assetSets/1/pavement-tr.png", "width": 64, "height": 32, "size": [1,1], "anchor": [0,0], "stack": true },
+        { "code": 35, "name": "pavement-bl", "type": "entity","subType": "road", "paintConstraint": "area", "imageUrl": "/img/assetSets/1/pavement-bl.png", "width": 64, "height": 32, "size": [1,1], "anchor": [0,0], "stack": true },
+        { "code": 36, "name": "pavement-br", "type": "entity","subType": "road", "paintConstraint": "area", "imageUrl": "/img/assetSets/1/pavement-br.png", "width": 64, "height": 32, "size": [1,1], "anchor": [0,0], "stack": true },
+        { "code": 37, "name": "pavement-tl", "type": "entity","subType": "road", "paintConstraint": "area", "imageUrl": "/img/assetSets/1/pavement-tl.png", "width": 64, "height": 32, "size": [1,1], "anchor": [0,0], "stack": true },
+        { "code": 38, "name": "pavement-rounded-corner-bottom", "type": "entity","subType": "road", "paintConstraint": "area", "imageUrl": "/img/assetSets/1/pavement-rounded-corner-bottom.png", "width": 128, "height": 64, "size": [2,2], "anchor": [1,1], "stack": true },
+        { "code": 39, "name": "pavement-rounded-corner-top", "type": "entity","subType": "road", "paintConstraint": "area", "imageUrl": "/img/assetSets/1/pavement-rounded-corner-top.png", "width": 128, "height": 64, "size": [2,2], "anchor": [1,1], "stack": true },
+        { "code": 40, "name": "pavement-rounded-corner-left", "type": "entity","subType": "road", "paintConstraint": "area", "imageUrl": "/img/assetSets/1/pavement-rounded-corner-left.png", "width": 128, "height": 64, "size": [2,2], "anchor": [1,1], "stack": true },
+        { "code": 41, "name": "pavement-rounded-corner-right", "type": "entity","subType": "road", "paintConstraint": "area", "imageUrl": "/img/assetSets/1/pavement-rounded-corner-right.png", "width": 128, "height": 64, "size": [2,2], "anchor": [1,1], "stack": true }
     ],
     "imageAssetTypes": [
         { "title": "Terrain", "subType": "terrain" },
