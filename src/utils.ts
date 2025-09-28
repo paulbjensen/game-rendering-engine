@@ -25,6 +25,8 @@ const imageHasLoaded = (img: HTMLImageElement) => {
 	return img.complete && img.naturalHeight !== 0;
 };
 
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 const delayUntil = (condition: () => boolean, interval: number = 100) => {
 	return new Promise<void>((resolve) => {
 		const checkCondition = () => {
@@ -56,4 +58,4 @@ const loadMapData = async (url: string): Promise<MapDataV2> => {
 	}
 };
 
-export { loadImage, loadJSON, loadMapData, imageHasLoaded, delayUntil };
+export { loadImage, loadJSON, loadMapData, imageHasLoaded, delay, delayUntil };

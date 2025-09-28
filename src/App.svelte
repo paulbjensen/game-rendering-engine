@@ -391,8 +391,7 @@
                     */
                     (async () => {
                         await gameMap.load();
-                        gameMap.drawBackground();
-                        gameMap.draw();
+                        resizeCanvases();
                     })();
                     sections = imageAssetTypes;
                 }

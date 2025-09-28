@@ -131,6 +131,10 @@ class GameMap {
 
 	// Updates the entities
 	updateEntities(entities: Entity[]) {
+		// Reset animation state for all entities so that they are not stuck
+		for (const entity of entities) {
+			entity.animationStartMs = undefined;
+		}
 		this.entities = entities;
 	}
 
