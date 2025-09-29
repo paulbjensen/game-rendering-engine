@@ -38,19 +38,6 @@ export type RectsSpriteMeta = {
 };
 
 export type SpriteMeta = GridSpriteMeta | RectsSpriteMeta;
-// | {
-// 		mode: "grid";
-// 		frameSize: [number, number];
-// 		grid: { rows: number; cols: number; order?: "row-major" | "col-major" };
-// 		animations: Record<string, SpriteAnimation>;
-// 		defaultAnimation: string;
-//   }
-// | {
-// 		mode: "rects";
-// 		rects: { x: number; y: number; w: number; h: number }[];
-// 		animations: Record<string, SpriteAnimation>;
-// 		defaultAnimation: string;
-//   };
 
 export type ImageAssetType = "ground" | "entity";
 
@@ -75,8 +62,8 @@ export type ImageAsset = {
 export type ImageAssetSetOption = {
 	name: string;
 	url: string;
-	maxRows: number;
-	maxColumns: number;
+	baseTileWidth: number;
+	baseTileHeight: number;
 };
 
 export type Entity = {

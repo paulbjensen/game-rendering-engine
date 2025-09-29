@@ -53,9 +53,9 @@
     // NOTE - in the future, we want to be able to load these from an API
     // and users who pay for the game can have access to more asset sets
     const imageAssetSets: ImageAssetSetOption[] = [
-        { name: 'One', url: '/imageAssetSets/1.json', maxRows: 256, maxColumns: 256 },
-        { name: 'Two', url: '/imageAssetSets/2.json', maxRows: 256, maxColumns: 256 },
-        { name: 'Three', url: '/imageAssetSets/3.json', maxRows: 128, maxColumns: 128 },
+        { name: 'One', url: '/imageAssetSets/1.json', baseTileWidth: 64, baseTileHeight: 32 },
+        { name: 'Two', url: '/imageAssetSets/2.json', baseTileWidth: 64, baseTileHeight: 32 },
+        { name: 'Three', url: '/imageAssetSets/3.json', baseTileWidth: 128, baseTileHeight: 64 },
     ];
 
     // Some initial state setting for the map editor
@@ -557,6 +557,7 @@
         rafId = requestAnimationFrame(tick);
 
     });
+    
 
     // When unmounting the component
     onDestroy(() => {

@@ -1,16 +1,42 @@
 <script lang="ts">
     import type { ImageAssetSetOption } from '../../types';
     const { hide, back, eventEmitter, imageAssetSets } = $props();
+    import MaxCanvasSize from '../../lib/maxCanvasSize/MaxCanvasSize';
+
+    const maxCanvasSize = new MaxCanvasSize();
+    let previousMaxCanvasSize = maxCanvasSize.findPreviousRun();
+
+    const DEFAULT_MAX_TILES = 64;
+
+    const baseTileWidth = 64;
+    let maxRows = $state(DEFAULT_MAX_TILES);
+    let maxColumns = $state(DEFAULT_MAX_TILES);
+    let mapRows = $state(DEFAULT_MAX_TILES);
+    let mapColumns = $state(DEFAULT_MAX_TILES);
+
+    if (!previousMaxCanvasSize) {
+        // console.log('No previous max canvas size found, running test...');
+        maxCanvasSize.hooks.afterStoreRun.push(() => {
+            previousMaxCanvasSize = maxCanvasSize.findPreviousRun();
+            // console.log('Previous max canvas size found:', previousMaxCanvasSize);
+            maxRows = previousMaxCanvasSize ? Math.floor(previousMaxCanvasSize.height / baseTileWidth) : DEFAULT_MAX_TILES;
+            maxColumns = previousMaxCanvasSize ? Math.floor(previousMaxCanvasSize.width / baseTileWidth) : DEFAULT_MAX_TILES;
+        });
+        maxCanvasSize.runTest({
+            testNumber: 4096,
+            successfulTest: 0,
+            failedTest: 0,
+        });
+    } else {
+        // console.log('Previous max canvas size found:', previousMaxCanvasSize);
+        maxRows = previousMaxCanvasSize ? Math.floor(previousMaxCanvasSize.height / baseTileWidth) : DEFAULT_MAX_TILES;
+        maxColumns = previousMaxCanvasSize ? Math.floor(previousMaxCanvasSize.width / baseTileWidth) : DEFAULT_MAX_TILES;
+    }
 
     // This feels like config that would be loaded from somewhere else
     let name = $state('My Map');
     let selectedImageAssetSet = $state(imageAssetSets[0].url);
 
-    let mapRows = $state(256);
-    let mapColumns = $state(256);
-
-    let maxRows = $state(256);
-    let maxColumns = $state(256);
 
     function newGame() {
         eventEmitter.emit('newGame', { name, imageAssetSetUrl: selectedImageAssetSet, mapRows, mapColumns });
@@ -21,22 +47,18 @@
     function updateMaxRowAndColumnSizes() {
         const imageAssetSet = imageAssetSets.find((ias: ImageAssetSetOption) => ias.url === selectedImageAssetSet);
         if (imageAssetSet) {
-            maxRows = imageAssetSet.maxRows;
-            maxColumns = imageAssetSet.maxColumns;
-            if (mapRows > maxRows) mapRows = maxRows;
-            if (mapColumns > maxColumns) mapColumns = maxColumns;
+            const newBaseTileWidth = imageAssetSet.baseTileWidth;
+            maxRows = previousMaxCanvasSize ? Math.floor(previousMaxCanvasSize.height / newBaseTileWidth) : DEFAULT_MAX_TILES;
+            maxColumns = previousMaxCanvasSize ? Math.floor(previousMaxCanvasSize.width / newBaseTileWidth) : DEFAULT_MAX_TILES;
+            if (mapRows > maxRows) {
+                mapRows = maxRows;
+            }
+            if (mapColumns > maxColumns) {
+                mapColumns = maxColumns;
+            }    
         }        
     }
 
-    /*
-        TODO - you will need to limit the number of rows/columns based on the 
-        image asset set chosen as well, as there is a hard limit of the 
-        number of pixels that a canvas can be: 268435456 pixels
-
-        16,384 × 16,384 (16,384 is 256 * 64)
-
-        So for an asset image set with 128x64 tiles, the max map size is 128x128 tiles.
-    */
 </script>
 
 <style>
