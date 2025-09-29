@@ -98,10 +98,10 @@
             <option value={imageAssetSet.url}>{imageAssetSet.name}</option>
         {/each}
     </select>
-    <label for="map-rows">Rows:</label>
-    <input id="map-rows" type="number" min="1" max={maxRows} bind:value={mapRows} />
-    <label for="map-columns">Columns:</label>
-    <input id="map-columns" type="number" min="1" max={maxColumns} bind:value={mapColumns} />
+    <label for="map-rows">Rows: {mapRows}</label>
+    <input id="map-rows" type="range" min="1" max={maxRows} bind:value={mapRows} />
+    <label for="map-columns">Columns: {mapColumns}</label>
+    <input id="map-columns" type="range" min="1" max={maxColumns} bind:value={mapColumns} />
     <button type="button" onclick={newGame}>Start</button>
 </form>
 <button onclick={back}>Back</button>
