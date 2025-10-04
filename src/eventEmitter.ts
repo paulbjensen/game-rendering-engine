@@ -26,6 +26,8 @@ type MyEvents = EventMap & {
 		mapRows: number;
 		mapColumns: number;
 	}) => void;
+	showModal: (modal: "welcome" | "load" | "save") => void;
+	hideModal: (modal: "welcome" | "load" | "save") => void;
 };
 
 // Create an instance of the event emitter class with type safety

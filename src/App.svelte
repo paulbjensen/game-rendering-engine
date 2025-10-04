@@ -10,18 +10,20 @@
     import type { AppMode, Entity, MapData, MapDataV2, ImageAsset, ImageAssetSetOption } from './types';
     import { loadJSON } from './utils';
 	import ImageAssetSet from './assets/ImageAssetSet';
-    import Sidebar from './Sidebar.svelte';
-    import TopBar from './TopBar.svelte';
-	import WelcomeScreen from './modals/welcome/WelcomeScreen.svelte';
     import GameManager from './lib/GameManager/GameManager';
-    import LoadModal from './modals/load/LoadModal.svelte';
-    import SaveModal from './modals/save/SaveModal.svelte';
     import keyboardOptions from './config/keyboardOptions';
-    import FPSCounter from './lib/fpsCounter/FPSCounter.svelte';
     import inputDetector from './inputDetector';
     import History from './lib/history/History';
-	import GameScreen from './GameScreen.svelte';
-    
+
+    // Svelte components for the UI and the Game's main screen
+    import Sidebar from './map-ui/Sidebar.svelte';
+    import TopBar from './map-ui/TopBar.svelte';
+	import GameScreen from './map-ui/GameScreen.svelte';
+    import Modals from './modals/Modals.svelte';
+
+    // FPS Counter component to help with performance monitoring
+    import FPSCounter from './lib/fpsCounter/FPSCounter.svelte';
+
     // Used to toggle the FPSCounter component via keyboard controls
     let enableFPSCounter = $state(false);
     const toggleFPSCounter = () => enableFPSCounter = !enableFPSCounter;
@@ -47,7 +49,7 @@
     // Create an instance of the History class to manage the undo/redo of map changes
     let mapEventHistory = new History();
 
-    // Setup an instance of the GameManager class to handle saving/loading/deleting games
+    // Setup an instance of the GameManager class to handle saving/loading/deleting games - TODO - rename to MapManager?
     const gameManager = new GameManager();
 
     // NOTE - in the future, we want to be able to load these from an API
@@ -69,12 +71,6 @@
     // We will load the 1st image asset set by default
     let imageAssetSetUrl = $state(imageAssetSets[0].url);
 
-    // Toggles showing/hiding the load modal
-    let showLoadModal = $state(false);
-    
-    // Toggles showing/hiding the save modal
-    let showSaveModal = $state(false);
-
     // A helper function that will re-enable navigation interactions and disable editing interactions
     function setAppMode (mode: AppMode) {
         if (mode === "navigation") {
@@ -91,16 +87,16 @@
         appMode = mode;
     };
 
-    // Used to toggle showing/hiding the welcome screen
-    let hideWelcomeScreen = $state(false);
-
     // Attach the keyboard event listeners
     const keyboard = new Keyboard(keyboardOptions);
-    // TODO - move this to a place where we do it when starting a game, or loading a map
-    // and disable it when showing a modal
-    keyboard.attach();
-    keyboard.pauseListening = true;
 
+    /*
+        Generates a new map with the specified number of rows and columns.
+        The ground is initialized to all zeros (empty), and the entities
+        array is initialized to be empty.
+
+        This is used when creating a new game from the welcome screen.
+    */
     function generateNewMap({numRows, numColumns}: {numRows: number; numColumns: number}) {
         const columns = new Array(numColumns).fill(0);
         const ground = new Array(numRows).fill(0).map(() => [...columns]);
@@ -108,9 +104,12 @@
         return { ground, entities };
     }
 
-
     // When the page is loaded, we call the mount function
     onMount(async () => {
+
+        // We attach the keyboard event listeners, but pause listening until we load a game
+        keyboard.attach();
+        keyboard.pauseListening = true;
 
         // We load the the ground and entities from a JSON file - it's mostly empty green land - in fact, we could just generate this on the fly and save a HTTP request
         const { ground, entities } = generateNewMap({ numRows: 128, numColumns: 128 });
@@ -423,7 +422,6 @@
             keyboard.pauseListening = false;
             appMode = 'navigation';
             mapEventHistory = new History();
-
         }
 
         // Deletes a game
@@ -457,9 +455,6 @@
                     gameMap.columns = data.mapColumns;
                     await gameMap.load();
                     resizeCanvases();
-                    // These calls below are redundant as they are called in resizeCanvases
-                    // gameMap.drawBackground();
-                    // gameMap.draw();
                 }
             })();
             keyboard.pauseListening = false;
@@ -468,7 +463,7 @@
         };
 
         /*
-            If we attach/detach the iPad Pro from a magic keyboard, 
+            If we attach/detach the iPad Pro from a magic keyboard,
             then we we want to show/hide the cursor.
         */
         function showOrHideCursor() {
@@ -477,19 +472,6 @@
             } else {
                 gameMap?.clearCursor();
             }
-        }
-
-        /*
-            NOTE - I think that we will want to revisit how we toggle loading 
-            modals as the code for each modal looks like it could be DRYed up.
-        */
-        function showTheLoadModal() {
-            showLoadModal = true;
-        }
-
-        /* Same as above */
-        function showTheSaveModal() {
-            showSaveModal = true;
         }
 
         /* This function will handle both undo and redo actions */
@@ -537,29 +519,32 @@
         eventEmitter.on('newGame', newGame);
         eventEmitter.on('deleteGame', deleteGame);
         eventEmitter.on('toggleFPSCounter', toggleFPSCounter);
-        eventEmitter.on('showLoadModal', showTheLoadModal);
-        eventEmitter.on('showSaveModal', showTheSaveModal);
         eventEmitter.on("inputCapabilitiesChanged", showOrHideCursor);
         eventEmitter.on('undo', undo);
         eventEmitter.on('redo', redo);
-
 
         // Load map assets then resize the canvas once loaded
         await gameMap?.load();
         resizeCanvases();
 
         // This handles the animation frame rendering loop
-        let rafId = 0;
-        function tick(now: number) {
-            gameMap?.renderFrame(now);
+        function animate() {
+            let rafId = 0;
+            function tick(now: number) {
+                gameMap?.renderFrame(now);
+                rafId = requestAnimationFrame(tick);
+            }
             rafId = requestAnimationFrame(tick);
         }
-        rafId = requestAnimationFrame(tick);
 
+        animate();
     });
     
 
-    // When unmounting the component
+    /*
+        When unmounting the component, we will detach 
+        the control-related event listeners.
+    */
     onDestroy(() => {
         keyboard.detach();
         touch.detach();
@@ -576,13 +561,5 @@
         <Sidebar {sections} {imageAssetSet} {eventEmitter} {selectedImageAsset} hidden={appMode !== "edit"} />
     {/if}
     <TopBar {appMode} {eventEmitter} hidden={appMode === 'modal'} />
-    {#if !hideWelcomeScreen}
-        <WelcomeScreen {gameManager} {imageAssetSets} {eventEmitter} hide={() => hideWelcomeScreen = true} />
-    {/if}
-    {#if showLoadModal}
-        <LoadModal {gameManager} {eventEmitter} hide={() => showLoadModal = false} />
-    {/if}
-    {#if showSaveModal}
-        <SaveModal {gameManager} {eventEmitter} {gameName} hide={() => showSaveModal = false} />
-    {/if}
+    <Modals {gameManager} {imageAssetSets} {eventEmitter} {gameName} />
 </main>

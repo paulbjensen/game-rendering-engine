@@ -57,8 +57,8 @@
 
 {#if !hidden}
     <div id="topbar">
-        <button onclick={() => eventEmitter.emit('showLoadModal')}>Load</button>
-        <button onclick={() => eventEmitter.emit('showSaveModal')}>Save</button>
+        <button onclick={() => eventEmitter.emit('showModal', 'load')}>Load</button>
+        <button onclick={() => eventEmitter.emit('showModal', 'save')}>Save</button>
         <div class="divider">|</div>
         <button class:selected={appMode === 'edit'} onclick={toggleEditMode}>Editor</button>
         <div class="divider">|</div>
