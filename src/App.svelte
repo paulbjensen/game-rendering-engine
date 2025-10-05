@@ -71,6 +71,11 @@
     // We will load the 1st image asset set by default
     let imageAssetSetUrl = $state(imageAssetSets[0].url);
 
+    // Attach the keyboard event listeners
+    const keyboard = new Keyboard(keyboardOptions);
+
+    /* Functions */
+
     // A helper function that will re-enable navigation interactions and disable editing interactions
     function setAppMode (mode: AppMode) {
         if (mode === "navigation") {
@@ -87,19 +92,342 @@
         appMode = mode;
     };
 
-    // Attach the keyboard event listeners
-    const keyboard = new Keyboard(keyboardOptions);
+    /*
+        Selects an image asset and toggles mouse panning and momentum as 
+        we want to be able to apply a set of tiles by selecting multiple tiles  
+    */
+    function selectImageAsset (imageAsset: ImageAsset | null) {
+        if (imageAsset && appMode === 'edit') {
+            // Mouse
+            mouse.mousePanning = false;
+            mouse.momentum = false;
+
+            // Cursor (painting)
+            cursor.enablePainting = true;
+            cursor.setPaintConstraint(imageAsset.paintConstraint);
+
+            // Touch: disable 1-finger pan while editing; keep pinch if you like
+            touch.setEnabled({ panning: false, pinch: true }); // or { panning: false, pinch: false }
+        } else {
+            // Mouse
+            mouse.mousePanning = true;
+            mouse.momentum = true;
+
+            // Cursor - disable painting
+            cursor.enablePainting = false;
+
+            // Touch: re-enable gestures
+            touch.setEnabled({ panning: true, pinch: true });
+        }
+
+        cursor.selectedImageAsset = selectedImageAsset = imageAsset;
+    }
+
+    /*
+        Adjusts the zoom based on the zoomFactor number and zoom level
+        Used by the touch controls.
+    */
+    function adjustZoom (zoomFactor:number) {
+        camera.setZoom(camera.zoomLevel * zoomFactor);
+    }
+
+    // This is called when the camera is updated, so that we can 
+    // redraw the camera, as well as update the cursor's selectedTile if 
+    // needed
+    function cameraUpdated() {
+        if (!gameMap) return;
+        cursor.calculatePositionOnMap();
+        if (
+            gameMap.selectedTile
+        ) {
+            if (inputDetector.shouldShowMouseSelector({})) {
+                gameMap.drawCursorAt(...gameMap.selectedTile, selectedImageAsset);
+            }
+        }
+    }
+
+    // This is triggered when the user clicks on a set of tiles
+    function clickOnTiles (tiles: [number, number][]) {
+        if (tiles.length === 0) return;
+        if (selectedImageAsset && gameMap) {                
+            /*
+                NOTE - implementing full copy for now, will later 
+                implement a more memory-efficient snapshot approach later,
+                especially with potentially larger maps in the future
+            */
+            const before = {
+                ground: structuredClone(gameMap.ground),
+                /*
+                    We can't use structuredClone here as the entities are class instances,
+                    but interestingly it does make a copy of the state before the change,
+                    rather than pointing to a reference of the value.
+                */
+                entities: gameMap.entities
+            };
+
+            /*
+                If an image asset has a stack property set to true, then we allow
+                it to be placed on top of other entities, rather than clearing them.
+
+                This is used by the map editor when placing entities on top of other entities,
+                like cars on top of roads. 
+            */
+            if (!selectedImageAsset.stack) {
+                gameMap.clearEntitiesInArea([...tiles[0], ...tiles[tiles.length - 1]]);
+            }
+            const rows = tiles.map(t => t[0]);
+            const columns = tiles.map(t => t[1]);
+            const minRow = Math.min(...rows);
+            const maxRow = Math.max(...rows);
+            const minCol = Math.min(...columns);
+            const maxCol = Math.max(...columns);
+
+            const topLeftTile:[number, number] = [minRow, minCol];
+            const topRightTile:[number, number] = [minRow, maxCol];
+            const bottomLeftTile:[number, number] = [maxRow, minCol];
+            const bottomRightTile:[number, number] = [maxRow, maxCol];
+            const tilesToCheck = [topLeftTile, topRightTile, bottomLeftTile, bottomRightTile];
+
+            /*
+                We check that for multi-tile assets, all of the tiles fit on the map 
+                (so that you cannot place them outside of the map boundaries).
+            */
+            for (const tileToCheck of tilesToCheck) {
+                if (!gameMap.fitsOnMap({ position: tileToCheck, imageAsset: selectedImageAsset })) return;
+            }
+
+            /*
+                This logic checks whether we are placing a ground or entity asset,
+                and then applies some logic to it accordingly.
+
+                At the moment, ground assets are assumed to be single-tile assets,
+                and that they will always be placed on top of a ground layer.
+
+                NOTE - might be a good idea to be able to use the stack property
+                for ground assets that we want to place (e.g. water corner on sand for example)
+            */
+            for (const tile of tiles) {
+                if (selectedImageAsset?.type === 'ground') {
+                    gameMap.ground[tile[0]][tile[1]] = [0, selectedImageAsset.code];
+                } else {
+                    gameMap.addEntity({ position: tile, imageAsset: selectedImageAsset });
+                }
+            }
+
+            // We take a copy of the changes afterwards
+            const after = {
+                ground: gameMap.ground,
+                entities: gameMap.entities
+            };
+
+            // We then add the before/after states to the history for undo/redo support
+            mapEventHistory.addEvent({
+                type: 'clickBatch',
+                before,
+                after
+            });
+
+            // We then redraw the background and map
+            gameMap.drawBackground();
+            gameMap.draw();
+        }
+    }
+
+    // This is used to draw a preview of where the selected tiles are placed on the map 
+    function drawPreview(tiles: [number, number][]) {
+        if (tiles.length === 0) return;
+        if (selectedImageAsset && gameMap) {
+            gameMap.drawPreview(tiles);
+        }
+    }
+
+    // This clears the preview of the selected tiles
+    function clearPreview () {
+        if (gameMap) { gameMap?.clearPreview(); }
+    }
+    
+    // Saves the game
+    function saveGame (name:string) {
+        if (gameMap) {
+            gameName = name;
+            const gameData = {
+                version: 2,
+                ground: gameMap.ground,
+                entities: gameMap.entities,
+                imageAssetSetUrl,
+                panX: camera.panX,
+                panY: camera.panY,
+                zoomLevel: camera.zoomLevel
+            };
+            gameManager.save(name, gameData);
+            alert('Game saved!');
+        }
+    }
+
+    // Loads the game
+    async function loadGame (name?:string) {
+        if (!name) name = 'currentGame';
+        gameName = name;
+        const game = gameManager.load(name);
+        if (game && gameMap) {
+            if (Array.isArray(game.data)) {
+                console.log('Loading version 1 map data');
+                gameMap.updateEntities([]);
+                gameMap.drawBackground();
+                gameMap.draw();
+            } else {
+                console.log('Loading version 2 map data');
+                gameMap.updateGround(game.data.ground);
+                gameMap.updateEntities(game.data.entities);
+                imageAssetSetUrl = game.data.imageAssetSetUrl;
+
+
+                // We loads the image asset set for the saved game, or fallback to the default image asset set if not found
+                const { imageAssetTypes, baseTileWidth, baseTileHeight, imageAssets } = await loadJSON(game.data.imageAssetSetUrl || imageAssetSets[0].url);
+
+                // Update the image asset set for the game map instance
+                gameMap.imageAssetSet = imageAssetSet = new ImageAssetSet({
+                    imageAssets: imageAssets,
+                    baseTileWidth: baseTileWidth,
+                    baseTileHeight: baseTileHeight
+                });
+
+                /*
+                    We then load the game map along with the new image 
+                    asset set, and then redraw the background and map 
+                    afterwards.
+                */
+                (async () => {
+                    await gameMap.load();
+                    gameMap.resizeCanvases();
+                })();
+                sections = imageAssetTypes;
+            }
+        }
+
+        /*
+            We load the camera settings from the saved game, 
+            or use defaults if no saved camera settings were found
+
+            And then apply that to the camera. This is so that players can
+            pick up from where they left off. 
+        */
+        const { panX, panY, zoomLevel } = game.data as MapDataV2;
+        if (panX && panY && zoomLevel) {
+            camera.panX = panX;
+            camera.panY = panY;
+            camera.zoomLevel = zoomLevel;
+        } else {
+            camera.panX = 0;
+            camera.panY = 0;
+            camera.zoomLevel = 1;
+        }
+
+        /*
+            We re-enable keyboard listening, 
+            set the app mode to navigation, 
+            and reset the map event history.
+        */
+        keyboard.pauseListening = false;
+        appMode = 'navigation';
+        mapEventHistory = new History();
+    }
+
+    // Deletes a game
+    function deleteGame (name:string) {
+        if (confirm("Are you sure you want to delete this game?")) {
+            gameManager.delete(name);
+            alert('Game deleted!');
+        }
+    }
+
+    // Creates a new game from the welcome screen
+    function newGame (data: { name: string; imageAssetSetUrl: string; mapRows: number; mapColumns: number }) {
+        gameName = data.name;
+        (async () => {
+            imageAssetSetUrl = data.imageAssetSetUrl;
+            const { imageAssetTypes, baseTileWidth, baseTileHeight, imageAssets } = await loadJSON(data.imageAssetSetUrl);
+            sections = imageAssetTypes;
+            if (gameMap) {
+
+                const { ground, entities } = generateNewMap({ numRows: data.mapRows, numColumns: data.mapColumns });
+
+                gameMap.ground = ground;
+                gameMap.updateGround(ground);
+                gameMap.updateEntities(entities);
+                gameMap.imageAssetSet = imageAssetSet = new ImageAssetSet({
+                    imageAssets,
+                    baseTileWidth,
+                    baseTileHeight
+                });
+                gameMap.rows = data.mapRows;
+                gameMap.columns = data.mapColumns;
+                await gameMap.load();
+                gameMap.resizeCanvases();
+            }
+        })();
+        keyboard.pauseListening = false;
+        mapEventHistory = new History();
+        appMode = 'navigation';
+    };
+
+    /*
+        If we attach/detach the iPad Pro from a magic keyboard,
+        then we we want to show/hide the cursor.
+    */
+    function showOrHideCursor() {
+        if (inputDetector.shouldShowMouseSelector({excludeLastUsedPointer: true}) && gameMap?.selectedTile) {
+            gameMap?.drawCursorAt(...(gameMap.selectedTile), selectedImageAsset);
+        } else {
+            gameMap?.clearCursor();
+        }
+    }
+
+    /* This function will handle both undo and redo actions */
+    function undoOrRedo(action:'undo' | 'redo') {
+        const eventState = action === 'undo' ? 'before' : 'after';
+        const event = mapEventHistory[action]();
+        const state = event ? event[eventState] as { ground?: MapData; entities?: Entity[] } : null;
+        if (state && gameMap) {
+            state.ground && gameMap.updateGround(state.ground);
+            state.entities && gameMap.updateEntities(state.entities);
+            gameMap.drawBackground();
+            gameMap.draw();
+        }
+    }
+
+    /* This handles performing an undo function */
+    function undo() {
+        undoOrRedo('undo');
+    }
+
+    /*
+        This handles performing an undo function
+    */
+    function redo() {
+        undoOrRedo('redo');
+    }
+
+    // This handles the animation frame rendering loop
+    function animate() {
+        let rafId = 0;
+        function tick(now: number) {
+            gameMap?.renderFrame(now);
+            rafId = requestAnimationFrame(tick);
+        }
+        rafId = requestAnimationFrame(tick);
+    }
 
     // When the page is loaded, we call the mount function
     onMount(async () => {
 
-        // We attach the keyboard event listeners, but pause listening until we load a game
+        // We attach the keyboard event listeners, but pause listening until we start a new game or load a game
         keyboard.attach();
         keyboard.pauseListening = true;
 
-        // We load the the ground and entities from a JSON file - it's mostly empty green land - in fact, we could just generate this on the fly and save a HTTP request
+        // We load a new map by default for the game screen's welcome stage - in the future we could load a demo map instead like in Open TTD
         const { ground, entities } = generateNewMap({ numRows: 128, numColumns: 128 });
-        // We load an image asset set to render the map with
+        // We load an image asset set to render the map with - in this case the 1st image asset set
         const { imageAssetTypes, baseTileWidth, baseTileHeight, imageAssets } = await loadJSON('/imageAssetSets/1.json');
 
         // Sections are used by the sidebar to group image assets for adding to the map
@@ -139,324 +467,8 @@
         mouse.attach(cursorCanvas);
         cursor.attach({ target: cursorCanvas, camera, gameMap });
 
-        /*
-            Selects an image asset and toggles mouse panning and momentum as 
-            we want to be able to apply a set of tiles by selecting multiple tiles  
-        */
-        function selectImageAsset (imageAsset: ImageAsset | null) {
-            if (imageAsset && appMode === 'edit') {
-                // Mouse
-                mouse.mousePanning = false;
-                mouse.momentum = false;
-
-                // Cursor (painting)
-                cursor.enablePainting = true;
-                cursor.setPaintConstraint(imageAsset.paintConstraint);
-
-                // Touch: disable 1-finger pan while editing; keep pinch if you like
-                touch.setEnabled({ panning: false, pinch: true }); // or { panning: false, pinch: false }
-            } else {
-                // Mouse
-                mouse.mousePanning = true;
-                mouse.momentum = true;
-
-                // Cursor - disable painting
-                cursor.enablePainting = false;
-
-                // Touch: re-enable gestures
-                touch.setEnabled({ panning: true, pinch: true });
-            }
-
-            cursor.selectedImageAsset = selectedImageAsset = imageAsset;
-        }
-
-        /* 
-            Adjusts the zoom based on the zoomFactor number and zoom level
-            Used by the touch controls.
-        */
-        function adjustZoom (zoomFactor:number) {
-            camera.setZoom(camera.zoomLevel * zoomFactor);
-        }
-
         // Call the resizeCanvas function initially and when the window is resized
         window.addEventListener('resize', gameMap.resizeCanvases);
-
-        // This is called when the camera is updated, so that we can 
-        // redraw the camera, as well as update the cursor's selectedTile if 
-        // needed
-        function cameraUpdated() {
-            if (!gameMap) return;
-            cursor.calculatePositionOnMap();
-            if (
-                gameMap.selectedTile
-            ) {
-                if (inputDetector.shouldShowMouseSelector({})) {
-                    gameMap.drawCursorAt(...gameMap.selectedTile, selectedImageAsset);
-                }
-            }
-        }
-
-        // This is triggered when the user clicks on a set of tiles
-        function clickOnTiles (tiles: [number, number][]) {
-            if (tiles.length === 0) return;
-            if (selectedImageAsset && gameMap) {                
-                /*
-                    NOTE - implementing full copy for now, will later 
-                    implement a more memory-efficient snapshot approach later,
-                    especially with potentially larger maps in the future
-                */
-                const before = {
-                    ground: structuredClone(gameMap.ground),
-                    /*
-                        We can't use structuredClone here as the entities are class instances,
-                        but interestingly it does make a copy of the state before the change,
-                        rather than pointing to a reference of the value.
-                    */
-                    entities: gameMap.entities
-                };
-
-                /*
-                    If an image asset has a stack property set to true, then we allow
-                    it to be placed on top of other entities, rather than clearing them.
-
-                    This is used by the map editor when placing entities on top of other entities,
-                    like cars on top of roads. 
-                */
-                if (!selectedImageAsset.stack) {
-                    gameMap.clearEntitiesInArea([...tiles[0], ...tiles[tiles.length - 1]]);
-                }
-                const rows = tiles.map(t => t[0]);
-                const columns = tiles.map(t => t[1]);
-                const minRow = Math.min(...rows);
-                const maxRow = Math.max(...rows);
-                const minCol = Math.min(...columns);
-                const maxCol = Math.max(...columns);
-
-                const topLeftTile:[number, number] = [minRow, minCol];
-                const topRightTile:[number, number] = [minRow, maxCol];
-                const bottomLeftTile:[number, number] = [maxRow, minCol];
-                const bottomRightTile:[number, number] = [maxRow, maxCol];
-                const tilesToCheck = [topLeftTile, topRightTile, bottomLeftTile, bottomRightTile];
-
-                /*
-                    We check that for multi-tile assets, all of the tiles fit on the map 
-                    (so that you cannot place them outside of the map boundaries).
-                */
-                for (const tileToCheck of tilesToCheck) {
-                    if (!gameMap.fitsOnMap({ position: tileToCheck, imageAsset: selectedImageAsset })) return;
-                }
-
-                /*
-                    This logic checks whether we are placing a ground or entity asset,
-                    and then applies some logic to it accordingly.
-
-                    At the moment, ground assets are assumed to be single-tile assets,
-                    and that they will always be placed on top of a ground layer.
-
-                    NOTE - might be a good idea to be able to use the stack property
-                    for ground assets that we want to place (e.g. water corner on sand for example)
-                */
-                for (const tile of tiles) {
-                    if (selectedImageAsset?.type === 'ground') {
-                        gameMap.ground[tile[0]][tile[1]] = [0, selectedImageAsset.code];
-                    } else {
-                        gameMap.addEntity({ position: tile, imageAsset: selectedImageAsset });
-                    }
-                }
-
-                // We take a copy of the changes afterwards
-                const after = {
-                    ground: gameMap.ground,
-                    entities: gameMap.entities
-                };
-
-                // We then add the before/after states to the history for undo/redo support
-                mapEventHistory.addEvent({
-                    type: 'clickBatch',
-                    before,
-                    after
-                });
-
-                // We then redraw the background and map
-                gameMap.drawBackground();
-                gameMap.draw();
-            }
-        }
-
-        // This is used to draw a preview of where the selected tiles are placed on the map 
-        function drawPreview(tiles: [number, number][]) {
-            if (tiles.length === 0) return;
-            if (selectedImageAsset && gameMap) {
-                gameMap.drawPreview(tiles);
-            }
-        }
-
-        // This clears the preview of the selected tiles
-        function clearPreview () {
-            if (gameMap) { gameMap?.clearPreview(); }
-        }
-
-        // Saves the game
-        function saveGame (name:string) {
-            if (gameMap) {
-                gameName = name;
-                const gameData = {
-                    version: 2,
-                    ground: gameMap.ground,
-                    entities: gameMap.entities,
-                    imageAssetSetUrl,
-                    panX: camera.panX,
-                    panY: camera.panY,
-                    zoomLevel: camera.zoomLevel
-                };
-                gameManager.save(name, gameData);
-                alert('Game saved!');
-            }
-        }
-
-        // Loads the game
-        async function loadGame (name?:string) {
-            if (!name) name = 'currentGame';
-            gameName = name;
-            const game = gameManager.load(name);
-            if (game && gameMap) {
-                if (Array.isArray(game.data)) {
-                    console.log('Loading version 1 map data');
-                    gameMap.updateEntities([]);
-                    gameMap.drawBackground();
-                    gameMap.draw();
-                } else {
-                    console.log('Loading version 2 map data');
-                    gameMap.updateGround(game.data.ground);
-                    gameMap.updateEntities(game.data.entities);
-                    imageAssetSetUrl = game.data.imageAssetSetUrl;
-
-
-                    // We loads the image asset set for the saved game, or fallback to the default image asset set if not found
-                    const { imageAssetTypes, baseTileWidth, baseTileHeight, imageAssets } = await loadJSON(game.data.imageAssetSetUrl || imageAssetSets[0].url);
-
-                    // Update the image asset set for the game map instance
-                    gameMap.imageAssetSet = imageAssetSet = new ImageAssetSet({
-                        imageAssets: imageAssets,
-                        baseTileWidth: baseTileWidth,
-                        baseTileHeight: baseTileHeight
-                    });
-
-                    /*
-                        We then load the game map along with the new image 
-                        asset set, and then redraw the background and map 
-                        afterwards.
-                    */
-                    (async () => {
-                        await gameMap.load();
-                        gameMap.resizeCanvases();
-                    })();
-                    sections = imageAssetTypes;
-                }
-            }
-
-            /*
-                We load the camera settings from the saved game, 
-                or use defaults if no saved camera settings were found
-
-                And then apply that to the camera. This is so that players can
-                pick up from where they left off. 
-            */
-            const { panX, panY, zoomLevel } = game.data as MapDataV2;
-            if (panX && panY && zoomLevel) {
-                camera.panX = panX;
-                camera.panY = panY;
-                camera.zoomLevel = zoomLevel;
-            } else {
-                camera.panX = 0;
-                camera.panY = 0;
-                camera.zoomLevel = 1;
-            }
-
-            /*
-                We re-enable keyboard listening, 
-                set the app mode to navigation, 
-                and reset the map event history.
-            */
-            keyboard.pauseListening = false;
-            appMode = 'navigation';
-            mapEventHistory = new History();
-        }
-
-        // Deletes a game
-        function deleteGame (name:string) {
-            if (confirm("Are you sure you want to delete this game?")) {
-                gameManager.delete(name);
-                alert('Game deleted!');
-            }
-        }
-
-        // Creates a new game from the welcome screen
-        function newGame (data: { name: string; imageAssetSetUrl: string; mapRows: number; mapColumns: number }) {
-            gameName = data.name;
-            (async () => {
-                imageAssetSetUrl = data.imageAssetSetUrl;
-                const { imageAssetTypes, baseTileWidth, baseTileHeight, imageAssets } = await loadJSON(data.imageAssetSetUrl);
-                sections = imageAssetTypes;
-                if (gameMap) {
-
-                    const { ground, entities } = generateNewMap({ numRows: data.mapRows, numColumns: data.mapColumns });
-
-                    gameMap.ground = ground;
-                    gameMap.updateGround(ground);
-                    gameMap.updateEntities(entities);
-                    gameMap.imageAssetSet = imageAssetSet = new ImageAssetSet({
-                        imageAssets,
-                        baseTileWidth,
-                        baseTileHeight
-                    });
-                    gameMap.rows = data.mapRows;
-                    gameMap.columns = data.mapColumns;
-                    await gameMap.load();
-                    gameMap.resizeCanvases();
-                }
-            })();
-            keyboard.pauseListening = false;
-            mapEventHistory = new History();
-            appMode = 'navigation';
-        };
-
-        /*
-            If we attach/detach the iPad Pro from a magic keyboard,
-            then we we want to show/hide the cursor.
-        */
-        function showOrHideCursor() {
-            if (inputDetector.shouldShowMouseSelector({excludeLastUsedPointer: true}) && gameMap?.selectedTile) {
-                gameMap?.drawCursorAt(...(gameMap.selectedTile), selectedImageAsset);
-            } else {
-                gameMap?.clearCursor();
-            }
-        }
-
-        /* This function will handle both undo and redo actions */
-        function undoOrRedo(action:'undo' | 'redo') {
-            const eventState = action === 'undo' ? 'before' : 'after';
-            const event = mapEventHistory[action]();
-            const state = event ? event[eventState] as { ground?: MapData; entities?: Entity[] } : null;
-            if (state && gameMap) {
-                state.ground && gameMap.updateGround(state.ground);
-                state.entities && gameMap.updateEntities(state.entities);
-                gameMap.drawBackground();
-                gameMap.draw();
-            }
-        }
-
-        /* This handles performing an undo function */
-        function undo() {
-            undoOrRedo('undo');
-        }
-
-        /*
-            This handles performing an undo function
-        */
-        function redo() {
-            undoOrRedo('redo');
-        }
 
         // EventEmitter bindings
         eventEmitter.on('startPanning', camera.startPanning);
@@ -486,19 +498,9 @@
         await gameMap?.load();
         gameMap.resizeCanvases();
 
-        // This handles the animation frame rendering loop
-        function animate() {
-            let rafId = 0;
-            function tick(now: number) {
-                gameMap?.renderFrame(now);
-                rafId = requestAnimationFrame(tick);
-            }
-            rafId = requestAnimationFrame(tick);
-        }
-
+        // Start the animation loop
         animate();
     });
-    
 
     /*
         When unmounting the component, we will detach 
