@@ -83,6 +83,8 @@ class GameMap {
 		this.computeSpriteSourceRect = this.computeSpriteSourceRect.bind(this);
 		this.frameIndexToRect = this.frameIndexToRect.bind(this);
 
+		this.resizeCanvases = this.resizeCanvases.bind(this);
+
 		this.rows = this.ground.length;
 		this.columns = Math.max(...this.ground.map((r) => r.length));
 	}
@@ -458,6 +460,32 @@ class GameMap {
 				ex >= fromRow && ex <= toRow && ey >= fromCol && ey <= toCol;
 			return !entityIsInArea;
 		});
+	}
+
+	resizeCanvases() {
+		const W = this.imageAssetSet.baseTileWidth;
+		const H = this.imageAssetSet.baseTileHeight;
+		const Hmax = Math.max(
+			...this.imageAssetSet.imageAssets.map((a) => a.height ?? H),
+		);
+
+		// Full map bounding box in *world* pixels (zoom=1)
+		this.background.width = Math.ceil(((this.rows + this.columns) * W) / 2);
+		this.background.height = Math.ceil(
+			((this.rows + this.columns) * H) / 2 + (Hmax - H),
+		);
+
+		// We resize the map and cursor canvases to be the width and height of the window
+		// We don't include the background canvas because it serves the purpose of being a full rendering of the map which we extract a sample from
+		const canvasElements = [this.target, this.cursorTarget];
+		canvasElements.forEach((canvas) => {
+			canvas.width = window.innerWidth;
+			canvas.height = window.innerHeight;
+		});
+		// We redraw the background and map once resized
+		// Question - do we need to redraw the background every time - or just once before the start?
+		this.drawBackground();
+		this.draw();
 	}
 
 	/* ===========================

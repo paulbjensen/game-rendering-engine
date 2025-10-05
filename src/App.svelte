@@ -153,33 +153,6 @@
         mouse.attach(cursorCanvas);
         cursor.attach({ target: cursorCanvas, camera, gameMap });
 
-        /* Resizes the canvas elements so that they always fit within the window */
-        function resizeCanvases() {
-            if (!gameMap) return;
-
-            const W = gameMap.imageAssetSet.baseTileWidth;
-            const H = gameMap.imageAssetSet.baseTileHeight;
-            const Hmax = Math.max(
-            ...gameMap.imageAssetSet.imageAssets.map(a => a.height ?? H)
-            );
-
-            // Full map bounding box in *world* pixels (zoom=1)
-            backgroundCanvas.width  = Math.ceil((gameMap.rows + gameMap.columns) * W / 2);
-            backgroundCanvas.height = Math.ceil((gameMap.rows + gameMap.columns) * H / 2 + (Hmax - H));
-
-            // We resize the map and cursor canvases to be the width and height of the window
-            // We don't include the background canvas because it serves the purpose of being a full rendering of the map which we extract a sample from
-            const canvasElements = [mapCanvas, cursorCanvas];
-            canvasElements.forEach(canvas => {
-                canvas.width = window.innerWidth;
-                canvas.height = window.innerHeight;
-            });
-            // We redraw the background and map once resized 
-            // Question - do we need to redraw the background every time - or just once before the start?
-            gameMap.drawBackground();
-            gameMap.draw();
-        }
-
         /*
             Selects an image asset and toggles mouse panning and momentum as 
             we want to be able to apply a set of tiles by selecting multiple tiles  
@@ -220,7 +193,7 @@
         }
 
         // Call the resizeCanvas function initially and when the window is resized
-        window.addEventListener('resize', resizeCanvases);
+        window.addEventListener('resize', gameMap.resizeCanvases);
 
         // This is called when the camera is updated, so that we can 
         // redraw the camera, as well as update the cursor's selectedTile if 
@@ -390,7 +363,7 @@
                     */
                     (async () => {
                         await gameMap.load();
-                        resizeCanvases();
+                        gameMap.resizeCanvases();
                     })();
                     sections = imageAssetTypes;
                 }
@@ -454,7 +427,7 @@
                     gameMap.rows = data.mapRows;
                     gameMap.columns = data.mapColumns;
                     await gameMap.load();
-                    resizeCanvases();
+                    gameMap.resizeCanvases();
                 }
             })();
             keyboard.pauseListening = false;
@@ -525,7 +498,7 @@
 
         // Load map assets then resize the canvas once loaded
         await gameMap?.load();
-        resizeCanvases();
+        gameMap.resizeCanvases();
 
         // This handles the animation frame rendering loop
         function animate() {
