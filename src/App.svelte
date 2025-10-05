@@ -49,7 +49,7 @@
     // Create an instance of the History class to manage the undo/redo of map changes
     let mapEventHistory = new History();
 
-    // Setup an instance of the GameManager class to handle saving/loading/deleting games - TODO - rename to MapManager?
+    // Setup an instance of the GameManager class to handle saving/loading/deleting games
     const gameManager = new GameManager();
 
     // NOTE - in the future, we want to be able to load these from an API
@@ -557,9 +557,7 @@
 <main>
     <FPSCounter show={enableFPSCounter} />
     <GameScreen />
-    {#if imageAssetSet}
-        <Sidebar {sections} {imageAssetSet} {eventEmitter} {selectedImageAsset} hidden={appMode !== "edit"} />
-    {/if}
+    <Sidebar {sections} {imageAssetSet} {eventEmitter} {selectedImageAsset} hidden={appMode !== "edit"} />
     <TopBar {appMode} {eventEmitter} hidden={appMode === 'modal'} />
     <Modals {gameManager} {imageAssetSets} {eventEmitter} {gameName} />
 </main>

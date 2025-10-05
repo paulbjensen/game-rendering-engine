@@ -147,31 +147,33 @@
     }
 </style>
 
-<div id="sidebar" class:hidden={hidden}>
-    <div class="title">Editor</div>
-    <div id="sections">
-        {#each sections as section}
-            <div class="section">
-                <div class="section-title">{section.title}</div>
-                <div class="section-content">
-                    {#each imageAssetSet.imageAssets.filter(filterBySection(section)) as imageAsset}
-                        <button 
-                            type="button"
-                            onclick={toggleImageAsset(imageAsset)}
-                            class={selectedImageAsset?.code === imageAsset.code ? 'selected' : ''}
-                            title={imageAsset.name}
-                        >
-                            {#if isSprite(imageAsset)}
-                                <!-- Sprite preview: show frame 0 -->
-                                <div class="sprite-thumb" style={spriteThumbStyle(imageAsset)}></div>
-                            {:else}
-                                <!-- Static image fallback -->
-                                <img class="thumb-img" src={imageAsset.imageUrl} alt={imageAsset.name} width="64" />
-                            {/if}
-                        </button>
-                    {/each}
+{#if imageAssetSet}
+    <div id="sidebar" class:hidden={hidden}>
+        <div class="title">Editor</div>
+        <div id="sections">
+            {#each sections as section}
+                <div class="section">
+                    <div class="section-title">{section.title}</div>
+                    <div class="section-content">
+                        {#each imageAssetSet.imageAssets.filter(filterBySection(section)) as imageAsset}
+                            <button 
+                                type="button"
+                                onclick={toggleImageAsset(imageAsset)}
+                                class={selectedImageAsset?.code === imageAsset.code ? 'selected' : ''}
+                                title={imageAsset.name}
+                            >
+                                {#if isSprite(imageAsset)}
+                                    <!-- Sprite preview: show frame 0 -->
+                                    <div class="sprite-thumb" style={spriteThumbStyle(imageAsset)}></div>
+                                {:else}
+                                    <!-- Static image fallback -->
+                                    <img class="thumb-img" src={imageAsset.imageUrl} alt={imageAsset.name} width="64" />
+                                {/if}
+                            </button>
+                        {/each}
+                    </div>
                 </div>
-            </div>
-        {/each}
+            {/each}
+        </div>
     </div>
-</div>
+{/if}
