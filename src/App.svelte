@@ -8,7 +8,7 @@
     import Cursor from './controls/cursor/Cursor';
     import GameMap from './GameMap';
     import type { AppMode, Entity, MapData, MapDataV2, ImageAsset, ImageAssetSetOption } from './types';
-    import { loadJSON } from './utils';
+    import { generateNewMap, loadJSON } from './utils';
 	import ImageAssetSet from './assets/ImageAssetSet';
     import GameManager from './lib/GameManager/GameManager';
     import keyboardOptions from './config/keyboardOptions';
@@ -89,20 +89,6 @@
 
     // Attach the keyboard event listeners
     const keyboard = new Keyboard(keyboardOptions);
-
-    /*
-        Generates a new map with the specified number of rows and columns.
-        The ground is initialized to all zeros (empty), and the entities
-        array is initialized to be empty.
-
-        This is used when creating a new game from the welcome screen.
-    */
-    function generateNewMap({numRows, numColumns}: {numRows: number; numColumns: number}) {
-        const columns = new Array(numColumns).fill(0);
-        const ground = new Array(numRows).fill(0).map(() => [...columns]);
-        const entities:Entity[] = [];
-        return { ground, entities };
-    }
 
     // When the page is loaded, we call the mount function
     onMount(async () => {
