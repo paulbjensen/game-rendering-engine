@@ -490,13 +490,11 @@ class GameMap {
 
 	// This handles the animation frame rendering loop
 	animate() {
-		let rafId = 0;
-		const self = this;
-		function tick(now: number) {
-			self.renderFrame(now);
-			rafId = requestAnimationFrame(tick);
-		}
-		rafId = requestAnimationFrame(tick);
+		const tick = (now: number) => {
+			this.renderFrame(now);
+			requestAnimationFrame(tick);
+		};
+		requestAnimationFrame(tick);
 	}
 
 	/* ===========================
