@@ -82,8 +82,8 @@ class GameMap {
 		this.drawAnimatedEntities = this.drawAnimatedEntities.bind(this);
 		this.computeSpriteSourceRect = this.computeSpriteSourceRect.bind(this);
 		this.frameIndexToRect = this.frameIndexToRect.bind(this);
-
 		this.resizeCanvases = this.resizeCanvases.bind(this);
+		this.animate = this.animate.bind(this);
 
 		this.rows = this.ground.length;
 		this.columns = Math.max(...this.ground.map((r) => r.length));
@@ -486,6 +486,17 @@ class GameMap {
 		// Question - do we need to redraw the background every time - or just once before the start?
 		this.drawBackground();
 		this.draw();
+	}
+
+	// This handles the animation frame rendering loop
+	animate() {
+		let rafId = 0;
+		const self = this;
+		function tick(now: number) {
+			self.renderFrame(now);
+			rafId = requestAnimationFrame(tick);
+		}
+		rafId = requestAnimationFrame(tick);
 	}
 
 	/* ===========================

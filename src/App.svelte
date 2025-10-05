@@ -123,14 +123,6 @@
         cursor.selectedImageAsset = selectedImageAsset = imageAsset;
     }
 
-    /*
-        Adjusts the zoom based on the zoomFactor number and zoom level
-        Used by the touch controls.
-    */
-    function adjustZoom (zoomFactor:number) {
-        camera.setZoom(camera.zoomLevel * zoomFactor);
-    }
-
     // This is called when the camera is updated, so that we can 
     // redraw the camera, as well as update the cursor's selectedTile if 
     // needed
@@ -239,11 +231,6 @@
         if (selectedImageAsset && gameMap) {
             gameMap.drawPreview(tiles);
         }
-    }
-
-    // This clears the preview of the selected tiles
-    function clearPreview () {
-        if (gameMap) { gameMap?.clearPreview(); }
     }
     
     // Saves the game
@@ -408,16 +395,6 @@
         undoOrRedo('redo');
     }
 
-    // This handles the animation frame rendering loop
-    function animate() {
-        let rafId = 0;
-        function tick(now: number) {
-            gameMap?.renderFrame(now);
-            rafId = requestAnimationFrame(tick);
-        }
-        rafId = requestAnimationFrame(tick);
-    }
-
     // When the page is loaded, we call the mount function
     onMount(async () => {
 
@@ -474,7 +451,7 @@
         eventEmitter.on('startPanning', camera.startPanning);
         eventEmitter.on('stopPanning', camera.stopPanning);
         eventEmitter.on('pan', camera.addPan);
-        eventEmitter.on('adjustZoom', adjustZoom);
+        eventEmitter.on('adjustZoom', camera.adjustZoom);
         eventEmitter.on('zoomOut', camera.zoomOut);
         eventEmitter.on('zoomIn', camera.zoomIn);
         eventEmitter.on('resetZoom', camera.resetZoomWithSmoothing);
@@ -483,7 +460,7 @@
         eventEmitter.on('selectImageAsset', selectImageAsset);
         eventEmitter.on('clickBatch', clickOnTiles);
         eventEmitter.on('drawPreview', drawPreview);
-        eventEmitter.on('clearPreview', clearPreview);
+        eventEmitter.on('clearPreview', gameMap.clearPreview);
         eventEmitter.on('setAppMode', setAppMode);
         eventEmitter.on('saveGame', saveGame);
         eventEmitter.on('loadGame', loadGame);
@@ -494,12 +471,10 @@
         eventEmitter.on('undo', undo);
         eventEmitter.on('redo', redo);
 
-        // Load map assets then resize the canvas once loaded
+        // Load map assets, resize the canvases, then start animating
         await gameMap?.load();
         gameMap.resizeCanvases();
-
-        // Start the animation loop
-        animate();
+        gameMap.animate();
     });
 
     /*

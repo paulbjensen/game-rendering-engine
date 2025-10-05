@@ -46,6 +46,7 @@ class Camera {
 		this.addPan = this.addPan.bind(this);
 		this.setZoom = this.setZoom.bind(this);
 		this.applyPanning = this.applyPanning.bind(this);
+		this.adjustZoom = this.adjustZoom.bind(this);
 	}
 
 	/*
@@ -70,6 +71,14 @@ class Camera {
 			panY: this.panY,
 			zoomLevel: this.zoomLevel,
 		});
+	}
+
+	/*
+        Adjusts the zoom based on the zoomFactor number and zoom level
+        Used by the touch controls.
+    */
+	adjustZoom(zoomFactor: number) {
+		this.setZoom(this.zoomLevel * zoomFactor);
 	}
 
 	zoomIn() {
