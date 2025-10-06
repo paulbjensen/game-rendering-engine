@@ -45,6 +45,7 @@
   },
   "dependencies": {
     "@anephenix/event-emitter": "^0.0.10",
+    "@sentry/svelte": "^10.17.0",
     "@sveu/browser": "^1.0.1",
     "canvas-size": "^2.0.0"
   },

@@ -40,7 +40,7 @@
         }
     }
 
-    // Setup instances of the camera, touch, mouse and cusror classes for the game map
+    // Setup instances of the camera, touch, mouse and cursor classes for the game map
     const camera = new Camera({ eventEmitter, ...settings.camera });
     const touch = new Touch({ eventEmitter });
     const mouse = new Mouse({ eventEmitter, ...settings.mouse });
