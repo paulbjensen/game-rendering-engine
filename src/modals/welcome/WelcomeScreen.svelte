@@ -202,9 +202,6 @@
             <p>If you have any questions, email me at <a href="mailto:paulbjensen@gmail.com">paulbjensen@gmail.com</a></p>
             <button onclick={() => loadScreen('welcome')}>Back</button>
         {/if}
-        <button type="button" onclick="{() => {throw new Error("Test Sentry tracks errors in production only");}}">
-            Break the world
-        </button>
     </div>
 
 
