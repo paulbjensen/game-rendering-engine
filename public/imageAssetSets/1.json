@@ -65,7 +65,7 @@
         { "code": 39, "name": "pavement-rounded-corner-top", "type": "entity","subType": "road", "paintConstraint": "area", "imageUrl": "/img/assetSets/1/pavement-rounded-corner-top.png", "width": 128, "height": 64, "size": [2,2], "anchor": [1,1], "stack": true },
         { "code": 40, "name": "pavement-rounded-corner-left", "type": "entity","subType": "road", "paintConstraint": "area", "imageUrl": "/img/assetSets/1/pavement-rounded-corner-left.png", "width": 128, "height": 64, "size": [2,2], "anchor": [1,1], "stack": true },
         { "code": 41, "name": "pavement-rounded-corner-right", "type": "entity","subType": "road", "paintConstraint": "area", "imageUrl": "/img/assetSets/1/pavement-rounded-corner-right.png", "width": 128, "height": 64, "size": [2,2], "anchor": [1,1], "stack": true },
-        { "code": 42, "name": "office-block-a", "type": "entity","subType": "building", "paintConstraint": "area", "imageUrl": "/img/assetSets/1/office-block-a.png", "width": 196, "height": 392, "size": [3,3], "anchor": [1,1] }
+        { "code": 42, "name": "office-block-a", "type": "entity","subType": "building", "paintConstraint": "area", "imageUrl": "/img/assetSets/1/office-block-a.png", "width": 196, "height": 392, "size": [3,3], "anchor": [2,2] }
     ],
     "imageAssetTypes": [
         { "title": "Terrain", "subType": "terrain" },

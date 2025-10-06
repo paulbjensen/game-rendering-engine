@@ -225,7 +225,10 @@
         }
     }
 
-    // This is used to draw a preview of where the selected tiles are placed on the map 
+    /* 
+        This is used to draw a preview of where the selected tiles are placed 
+        on the map (if doing a multiple-tile selection).
+    */
     function drawPreview(tiles: [number, number][]) {
         if (tiles.length === 0) return;
         if (selectedImageAsset && gameMap) {
