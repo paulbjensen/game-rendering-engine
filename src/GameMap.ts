@@ -75,6 +75,8 @@ class GameMap {
 		this.getMapCoords = this.getMapCoords.bind(this);
 		this.sampleBackground = this.sampleBackground.bind(this);
 		this.clearCursor = this.clearCursor.bind(this);
+		this.clearPreview = this.clearPreview.bind(this);
+		this.drawPreview = this.drawPreview.bind(this);
 		this.clearEntitiesInArea = this.clearEntitiesInArea.bind(this);
 		this.fitsOnMap = this.fitsOnMap.bind(this);
 
