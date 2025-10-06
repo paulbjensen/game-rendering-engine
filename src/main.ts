@@ -3,7 +3,7 @@ import { mount } from "svelte";
 import App from "./App.svelte";
 
 Sentry.init({
-	dsn: "https://f5c21ee8e3324bec1e7443982acca134@o95413.ingest.us.sentry.io/4510142976688128",
+	dsn: "https://cf55d1d44be3b8c823e635cd99f21f8e@o95413.ingest.us.sentry.io/4510143032918016",
 	// Setting this option to true will send default PII data to Sentry.
 	// For example, automatic IP address collection on events
 	sendDefaultPii: true,
