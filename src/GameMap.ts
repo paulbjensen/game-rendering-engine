@@ -184,9 +184,8 @@ class GameMap {
 		const rTiles = imageAsset?.size?.[0] ?? 1;
 		const cTiles = imageAsset?.size?.[1] ?? 1;
 
-		// ---- Anchor: bottom-center of the footprint ----
 		const anchorRowOffset = -(rTiles - 1); // shift up by (rows-1)
-		const anchorColOffset = -Math.floor(cTiles / 2); // center horizontally
+		const anchorColOffset = -(cTiles - 1); // shift left by (cols-1)
 
 		const startRow = row + anchorRowOffset; // top-left tile of footprint
 		const startCol = col + anchorColOffset;
@@ -417,9 +416,11 @@ class GameMap {
 		const [row, column] = position;
 
 		const withinMapRowRange =
-			row - (imageAsset.size[0] - 1 + (imageAsset.anchor[0] - 1)) >= 0;
+			row - (imageAsset.size[0] - 1) >= 0 &&
+			row + (imageAsset.anchor[0] - 1) <= this.rows;
 		const withinMapColumnRange =
-			column - (imageAsset.size[1] - 1 + (imageAsset.anchor[1] - 1)) >= 0;
+			column - (imageAsset.size[1] - 1) >= 0 &&
+			column + (imageAsset.anchor[1] - 1) <= this.columns;
 		return withinMapRowRange && withinMapColumnRange;
 	}
 
