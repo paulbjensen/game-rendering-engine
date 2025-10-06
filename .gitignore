@@ -1,3 +1,6 @@
 dist
 .DS_Store
 node_modules
+
+# Sentry Config File
+.env.sentry-build-plugin
