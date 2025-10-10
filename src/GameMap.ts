@@ -334,23 +334,28 @@ class GameMap {
 		}
 		this.entities = entities;
 
-		// NOTE - the performance regression isn't to do with the globes - it happens when the night is fully applied
-		//
-		// [12, 13, 14, 27, 32]
-		this.entities.forEach((e: Entity) => {
-			if ([12, 13, 27, 32].includes(e.code)) {
-				this.addGlow({
-					row: e.anchor[0],
-					col: e.anchor[1],
-					offsetPx: [32, 16], // Half of the image asset size
-					radius: 20,
-					alpha: 0.4,
-					linkToNight: true,
-					onAbove: 0.5,
-					offBelow: 0.4,
-				});
-			}
-		});
+		/* 
+			NOTE - Until I can work out a more performant way to implement lighting, 
+			I'm going to disable it for now. Was fun though.
+
+			Also, we'd need a way to embed this into the imageAssetSet or 
+			entity metadata so that we can know how to light it up,
+			rather than hard-coded here.
+		*/
+		// this.entities.forEach((e: Entity) => {
+		// 	if ([12, 13, 14, 27, 32].includes(e.code)) {
+		// 		this.addGlow({
+		// 			row: e.anchor[0],
+		// 			col: e.anchor[1],
+		// 			offsetPx: [32, 16], // Half of the image asset size
+		// 			radius: 20,
+		// 			alpha: 0.4,
+		// 			linkToNight: true,
+		// 			onAbove: 0.5,
+		// 			offBelow: 0.4,
+		// 		});
+		// 	}
+		// });
 	}
 
 	getMapCoords() {

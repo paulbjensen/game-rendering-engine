@@ -9,6 +9,18 @@
         eventEmitter.emit('setAppMode', newMode);
     }
 
+    type TimesOfDay = 'day' | 'night';
+    let timeOfDay = $state<TimesOfDay>('day');
+
+    function toggleTimeOfDay() {
+        timeOfDay = timeOfDay === 'day' ? 'night' : 'day';
+        if (timeOfDay === 'day') {
+            eventEmitter.emit('fadeToDay');
+        } else {
+            eventEmitter.emit('fadeToNight');
+        }
+    }
+
 </script>
 
 <style>
@@ -70,5 +82,14 @@
         <div class="divider">|</div>
         <button onclick={() => eventEmitter.emit('undo')}>Undo</button>
         <button onclick={() => eventEmitter.emit('redo')}>Redo</button>
+        <div class="divider">|</div>
+        <button onclick={toggleTimeOfDay}>
+            {#if timeOfDay === 'day'}
+                ☀️
+            {:else}
+                🌑
+            {/if}
+        </button>
+
     </div>
 {/if}
