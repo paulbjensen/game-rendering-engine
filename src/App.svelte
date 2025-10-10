@@ -473,10 +473,29 @@
         eventEmitter.on("inputCapabilitiesChanged", showOrHideCursor);
         eventEmitter.on('undo', undo);
         eventEmitter.on('redo', redo);
+        eventEmitter.on('fadeToNight', () => gameMap.fadeToNight(2500));
+        eventEmitter.on('fadeToDay', () => {
+            gameMap.fadeToDay(2500)
+        });
+        eventEmitter.on('glow', () => {
+            gameMap.addGlow({ row: 60, col: 80, radius: 60, alpha: 0.5, linkToNight: true, onAbove: 0.6, offBelow: 0.3 });
+            gameMap.addGlow({ row: 60, col: 80, radius: 22, alpha: 0.7 });            
+            gameMap.addGlow({ row: 60, col: 70, radius: 60, alpha: 0.5 });            
+            gameMap.addGlow({ row: 60, col: 60, radius: 80, alpha: 0.3 });            
+            gameMap.addGlow({ row: 60, col: 60, radius: 80, alpha: 0.0 });            
+        });
 
         // Load map assets, resize the canvases, then start animating
         await gameMap?.load();
         gameMap.resizeCanvases();
+
+        /*
+            Better to apply to the map rather than the background - 
+            as the performance impact on background at the end leads 
+            to a drop in the frame rate.
+        */
+        gameMap.nightApplyTarget = 'map';
+
         gameMap.animate();
     });
 
@@ -493,10 +512,25 @@
     });
 </script>
 
+<style>
+    #night-and-day {
+        position: absolute;
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1000;
+    }
+</style>
+
 <main>
     <FPSCounter show={enableFPSCounter} />
     <GameScreen />
     <Sidebar {sections} {imageAssetSet} {eventEmitter} {selectedImageAsset} hidden={appMode !== "edit"} />
     <TopBar {appMode} {eventEmitter} hidden={appMode === 'modal'} />
     <Modals {gameManager} {imageAssetSets} {eventEmitter} {gameName} />
+    <div id="night-and-day">
+        <button onclick={() => eventEmitter.emit('fadeToNight')}>🌑</button>
+        <button onclick={() => eventEmitter.emit('fadeToDay')}>☀️</button>
+        <button onclick={() => eventEmitter.emit('glow')}>💡</button>
+    </div>
 </main>

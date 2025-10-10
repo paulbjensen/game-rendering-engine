@@ -43,6 +43,148 @@ class GameMap {
 		cols: number;
 	};
 
+	// -------- Night tint state --------
+	// 0 = day, 1 = full night
+	private nightProgress: number = 0;
+	// Apply to which surface: view canvas (recommended) or prerendered background
+	nightApplyTarget: "map" | "background" = "map";
+	private nightAnim: {
+		start: number;
+		duration: number;
+		from: number;
+		to: number;
+		onDone?: () => void;
+	} | null = null;
+
+	/* ---- Simple glow system ---- */
+	private glows: Array<{
+		row: number;
+		col: number;
+		offsetPx?: [number, number]; // world-pixel offset from the tile’s top-left
+		radius: number; // radius in *screen* pixels at zoom=1; auto-scales with zoom
+		alpha?: number; // 0..1
+		linkToNight?: boolean; // if true, alpha scales with nightProgress
+		onAbove?: number; // light is fully on when nightProgress >= onAbove (e.g. 0.6)
+		offBelow?: number; // light is fully off when nightProgress <= offBelow (e.g. 0.3)
+	}> = [];
+
+	addGlow(g: {
+		row: number;
+		col: number;
+		offsetPx?: [number, number];
+		radius?: number;
+		alpha?: number;
+		linkToNight?: boolean;
+		onAbove?: number;
+		offBelow?: number;
+	}) {
+		const {
+			row,
+			col,
+			offsetPx = [0, 0],
+			radius = 16,
+			alpha = 0.6,
+			linkToNight = true,
+			onAbove = 0.65,
+			offBelow = 0.35,
+		} = g;
+		this.glows.push({
+			row,
+			col,
+			offsetPx,
+			radius,
+			alpha,
+			linkToNight,
+			onAbove,
+			offBelow,
+		});
+	}
+
+	private smoothstep(edge0: number, edge1: number, x: number) {
+		// Scale, clamp, then smooth cubic
+		const t = Math.max(
+			0,
+			Math.min(1, (x - edge0) / Math.max(1e-6, edge1 - edge0)),
+		);
+		return t * t * (3 - 2 * t);
+	}
+
+	clearGlows() {
+		this.glows = [];
+	}
+	private drawGlow(
+		ctx: CanvasRenderingContext2D,
+		x: number,
+		y: number,
+		radius = 16,
+		alpha = 0.6,
+	) {
+		ctx.save();
+		ctx.globalCompositeOperation = "lighter";
+		const g = ctx.createRadialGradient(x, y, 0, x, y, radius);
+		g.addColorStop(0, `rgba(255, 230, 140, ${alpha})`);
+		g.addColorStop(1, "rgba(255, 230, 140, 0)");
+		ctx.fillStyle = g;
+		ctx.beginPath();
+		ctx.arc(x, y, radius, 0, Math.PI * 2);
+		ctx.fill();
+		ctx.restore();
+	}
+	private drawGlows() {
+		if (!this.glows.length || !this._metrics || !this._bounds) return;
+		const ctx = this.target.getContext("2d");
+		if (!ctx) return;
+		// Compute view transform (for screen coordinates)
+		const tf = getViewTransform({
+			targetW: this.target.width,
+			targetH: this.target.height,
+			bgW: this.background.width,
+			bgH: this.background.height,
+			zoom: this.camera.zoomLevel,
+			panX: this.camera.panX,
+			panY: this.camera.panY,
+		});
+		const tfSnap = snapped(tf);
+		// Draw glows in *screen* space so radii look consistent; scale with zoom.
+		ctx.save();
+		ctx.setTransform(1, 0, 0, 1, 0, 0);
+		for (const g of this.glows) {
+			const {
+				row,
+				col,
+				offsetPx = [0, 0],
+				radius,
+				alpha = 0.6,
+				linkToNight = true,
+				onAbove = 0.65,
+				offBelow = 0.35,
+			} = g;
+
+			// compute effective alpha vs nightProgress
+			let aEff = alpha;
+			if (linkToNight) {
+				// fades 0→1 between offBelow..onAbove with a smooth curve
+				const k = this.smoothstep(offBelow, onAbove, this.nightProgress);
+				aEff = alpha * k;
+				if (aEff <= 0.01) continue; // effectively off
+			}
+			const { wx, wy } = rcToWorldTopLeft(
+				row,
+				col,
+				this._metrics,
+				this._bounds,
+			);
+			// Top-left of tile (world), convert to screen:
+			const { x, y } = worldToScreen(
+				wx + offsetPx[0],
+				wy + offsetPx[1],
+				tfSnap,
+			);
+			this.drawGlow(ctx, x, y, radius * tfSnap.zoom, aEff);
+		}
+		ctx.restore();
+	}
+
 	constructor({
 		background,
 		target,
@@ -91,6 +233,59 @@ class GameMap {
 		this.columns = Math.max(...this.ground.map((r) => r.length));
 	}
 
+	/* ---------- Night helpers ---------- */
+
+	setNightProgress(v: number) {
+		this.nightProgress = Math.max(0, Math.min(1, v));
+	}
+
+	fadeToNight(duration = 2500, onDone?: () => void) {
+		this.nightAnim = {
+			start: performance.now(),
+			duration,
+			from: this.nightProgress,
+			to: 1,
+			onDone,
+		};
+	}
+
+	fadeToDay(duration = 2500, onDone?: () => void) {
+		this.nightAnim = {
+			start: performance.now(),
+			duration,
+			from: this.nightProgress,
+			to: 0,
+			onDone,
+		};
+	}
+
+	private easeInOut(t: number) {
+		return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+	}
+
+	private drawNightTintOn(ctx: CanvasRenderingContext2D, strength: number) {
+		if (strength <= 0) return;
+		const { canvas } = ctx;
+
+		ctx.save();
+		// screen-space overlay
+		ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+		// Natural darkening that preserves highlights
+		ctx.globalCompositeOperation = "multiply";
+		ctx.fillStyle = `rgba(10, 20, 60, ${0.75 * strength})`; // moonlit blue
+		ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+		// Gentle cool cast for depth (optional)
+		ctx.globalCompositeOperation = "overlay";
+		ctx.fillStyle = `rgba(0, 10, 40, ${0.15 * strength})`;
+		ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+		ctx.restore();
+	}
+
+	/* ---------- Loading / data ---------- */
+
 	loadImageAssets() {
 		const loadOnlyMapAssets = false;
 		if (loadOnlyMapAssets) {
@@ -128,18 +323,34 @@ class GameMap {
 	// Updates the ground using the structuredClone
 	updateGround(ground: MapData) {
 		this.ground = structuredClone(ground);
-		// We need to set the rows and columns from the ground map
 		this.rows = ground.length;
 		this.columns = Math.max(...ground.map((r) => r.length));
 	}
 
 	// Updates the entities
 	updateEntities(entities: Entity[]) {
-		// Reset animation state for all entities so that they are not stuck
 		for (const entity of entities) {
 			entity.animationStartMs = undefined;
 		}
 		this.entities = entities;
+
+		// NOTE - the performance regression isn't to do with the globes - it happens when the night is fully applied
+		//
+		// [12, 13, 14, 27, 32]
+		this.entities.forEach((e: Entity) => {
+			if ([12, 13, 27, 32].includes(e.code)) {
+				this.addGlow({
+					row: e.anchor[0],
+					col: e.anchor[1],
+					offsetPx: [32, 16], // Half of the image asset size
+					radius: 20,
+					alpha: 0.4,
+					linkToNight: true,
+					onAbove: 0.5,
+					offBelow: 0.4,
+				});
+			}
+		});
 	}
 
 	getMapCoords() {
@@ -180,17 +391,15 @@ class GameMap {
 
 		if (!this._metrics || !this._bounds) return;
 
-		// Footprint in tiles (rows x cols)
 		const rTiles = imageAsset?.size?.[0] ?? 1;
 		const cTiles = imageAsset?.size?.[1] ?? 1;
 
-		const anchorRowOffset = -(rTiles - 1); // shift up by (rows-1)
-		const anchorColOffset = -(cTiles - 1); // shift left by (cols-1)
+		const anchorRowOffset = -(rTiles - 1);
+		const anchorColOffset = -(cTiles - 1);
 
-		const startRow = row + anchorRowOffset; // top-left tile of footprint
+		const startRow = row + anchorRowOffset;
 		const startCol = col + anchorColOffset;
 
-		// Canvas prep
 		ctx.setTransform(1, 0, 0, 1, 0, 0);
 		ctx.clearRect(0, 0, this.cursorTarget.width, this.cursorTarget.height);
 		ctx.imageSmoothingEnabled = true;
@@ -202,7 +411,6 @@ class GameMap {
 		const tW = this._metrics.W * this.camera.zoomLevel;
 		const tH = this._metrics.H * this.camera.zoomLevel;
 
-		// Determine bounding diamond for footprint
 		let minTopY = Infinity;
 		let maxBottomY = -Infinity;
 		let minLeftX = Infinity;
@@ -228,15 +436,14 @@ class GameMap {
 			}
 		}
 
-		// Diamond corners from those extrema
 		const midX = (minLeftX + maxRightX) / 2;
 		const midY = (minTopY + maxBottomY) / 2;
 
 		ctx.beginPath();
-		ctx.moveTo(midX, minTopY); // top
-		ctx.lineTo(maxRightX, midY); // right
-		ctx.lineTo(midX, maxBottomY); // bottom
-		ctx.lineTo(minLeftX, midY); // left
+		ctx.moveTo(midX, minTopY);
+		ctx.lineTo(maxRightX, midY);
+		ctx.lineTo(midX, maxBottomY);
+		ctx.lineTo(minLeftX, midY);
 		ctx.closePath();
 		ctx.stroke();
 
@@ -271,7 +478,6 @@ class GameMap {
 		const tileWScreen = W * zoom;
 		const tileHScreen = H * zoom;
 
-		// Clear overlay in screen space
 		ctx.setTransform(1, 0, 0, 1, 0, 0);
 		ctx.clearRect(0, 0, this.cursorTarget.width, this.cursorTarget.height);
 		ctx.imageSmoothingEnabled = true;
@@ -310,10 +516,6 @@ class GameMap {
 		ctx.clearRect(0, 0, this.cursorTarget.width, this.cursorTarget.height);
 	}
 
-	/**
-	 * Copies the pre-rendered background canvas to the target (view) canvas.
-	 * Use this per frame before drawing dynamic/animated entities.
-	 */
 	sampleBackground() {
 		const ctx = this.target.getContext("2d");
 		if (!ctx) return;
@@ -328,7 +530,7 @@ class GameMap {
 			panY: this.camera.panY,
 		});
 
-		const tfSnap = snapped(tf); // for crisp rendering
+		const tfSnap = snapped(tf);
 
 		ctx.setTransform(1, 0, 0, 1, 0, 0);
 		ctx.clearRect(0, 0, this.target.width, this.target.height);
@@ -339,18 +541,10 @@ class GameMap {
 		ctx.setTransform(1, 0, 0, 1, 0, 0);
 	}
 
-	/**
-	 * For compatibility with existing callers that expect a single draw pass of the background.
-	 * Prefer using renderFrame(perfNow) in your RAF loop for animations.
-	 */
 	draw() {
 		return this.sampleBackground();
 	}
 
-	/**
-	 * Pre-renders the static ground tiles into `background`.
-	 * NOTE: entities are intentionally NOT drawn here anymore (to allow animation).
-	 */
 	drawBackground() {
 		const ctx = this.background.getContext("2d");
 		if (!ctx) return;
@@ -358,7 +552,6 @@ class GameMap {
 		const W = this.imageAssetSet.baseTileWidth;
 		const H = this.imageAssetSet.baseTileHeight;
 
-		// NOTE - keep Wmax minimal for iOS perf
 		const Wmax = W;
 		const Hmax = Math.max(
 			...this.imageAssetSet.imageAssets.map((a) => a.height ?? H),
@@ -373,7 +566,6 @@ class GameMap {
 		ctx.imageSmoothingEnabled = true;
 		ctx.clearRect(0, 0, bounds.bgW, bounds.bgH);
 
-		// --- draw static ground only ---
 		for (let r = 0; r < this.rows; r++) {
 			for (let c = 0; c < this.columns; c++) {
 				const codes = this.ground[r][c];
@@ -383,7 +575,6 @@ class GameMap {
 					);
 					if (!tile?.image) return;
 
-					// ground placement (center on W×H base footprint)
 					const tW = tile.width ?? W;
 					const tH = tile.height ?? H;
 
@@ -398,14 +589,10 @@ class GameMap {
 			}
 		}
 
-		// Store for reuse
 		this._bounds = bounds;
 		this._metrics = metrics;
 	}
 
-	/**
-	 * Returns true if an asset (by its footprint/anchor) fits on the map bounds.
-	 */
 	fitsOnMap({
 		position,
 		imageAsset,
@@ -440,17 +627,11 @@ class GameMap {
 			elevation: 0,
 			offsetPx: [0, 0],
 			metadata: {},
-			// animation fields are optional; if omitted and asset has sprite,
-			// default animation will be used automatically
 		};
 
 		this.entities.push(entity);
 	}
 
-	/**
-	 * Removes entities whose anchor lies within the given area.
-	 * (You may later expand to cover full footprints.)
-	 */
 	clearEntitiesInArea(area: [number, number, number, number]) {
 		const [x0, y0, x1, y1] = area;
 		const fromRow = Math.min(x0, x1);
@@ -472,26 +653,21 @@ class GameMap {
 			...this.imageAssetSet.imageAssets.map((a) => a.height ?? H),
 		);
 
-		// Full map bounding box in *world* pixels (zoom=1)
 		this.background.width = Math.ceil(((this.rows + this.columns) * W) / 2);
 		this.background.height = Math.ceil(
 			((this.rows + this.columns) * H) / 2 + (Hmax - H),
 		);
 
-		// We resize the map and cursor canvases to be the width and height of the window
-		// We don't include the background canvas because it serves the purpose of being a full rendering of the map which we extract a sample from
 		const canvasElements = [this.target, this.cursorTarget];
 		canvasElements.forEach((canvas) => {
 			canvas.width = window.innerWidth;
 			canvas.height = window.innerHeight;
 		});
-		// We redraw the background and map once resized
-		// Question - do we need to redraw the background every time - or just once before the start?
+
 		this.drawBackground();
 		this.draw();
 	}
 
-	// This handles the animation frame rendering loop
 	animate() {
 		const tick = (now: number) => {
 			this.renderFrame(now);
@@ -500,27 +676,39 @@ class GameMap {
 		requestAnimationFrame(tick);
 	}
 
-	/* ===========================
-	 *   ANIMATION RENDER PATH
-	 * ===========================
-	 */
-
-	/**
-	 * Call this from your RAF loop: requestAnimationFrame((now)=>gameMap.renderFrame(now))
-	 * 1) Blits the pre-rendered background to target
-	 * 2) Draws entities (animated if sprite metadata exists)
-	 */
 	renderFrame(perfNow: number) {
-		// copy background to target (view)
+		// advance night animation
+		if (this.nightAnim) {
+			const { start, duration, from, to, onDone } = this.nightAnim;
+			const t = Math.min(1, (perfNow - start) / duration);
+			const k = this.easeInOut(t);
+			this.nightProgress = from + (to - from) * k;
+			if (t >= 1) {
+				this.nightAnim = null;
+				onDone?.();
+			}
+		}
+
+		// 1) background → target
 		this.sampleBackground();
-		// draw animated/dynamic entities on top
+		// 2) entities
 		this.drawAnimatedEntities(perfNow);
+
+		// 3) tint
+		if (this.nightProgress > 0) {
+			if (this.nightApplyTarget === "map") {
+				const ctx = this.target.getContext("2d");
+				if (ctx) this.drawNightTintOn(ctx, this.nightProgress);
+			} else {
+				const bctx = this.background.getContext("2d");
+				if (bctx) this.drawNightTintOn(bctx, this.nightProgress);
+			}
+		}
+
+		// 4) draw additive glows on the map after tint so they "light" the scene
+		this.drawGlows();
 	}
 
-	/**
-	 * Draws entities onto `target` using current camera transform.
-	 * Uses sprite frame selection if the asset defines a `sprite` block.
-	 */
 	private drawAnimatedEntities(perfNow: number) {
 		const ctx = this.target.getContext("2d");
 		if (!ctx || !this._metrics || !this._bounds) return;
@@ -539,7 +727,6 @@ class GameMap {
 		const W = this.imageAssetSet.baseTileWidth;
 		const H = this.imageAssetSet.baseTileHeight;
 
-		// Optional: z-order by (row+col)
 		const toDraw = this.entities
 			.slice()
 			.sort((a, b) => a.anchor[0] + a.anchor[1] - (b.anchor[0] + b.anchor[1]));
@@ -565,14 +752,12 @@ class GameMap {
 				wy - ((asset.height ?? H) - H) + (entity.offsetPx?.[1] ?? 0);
 
 			if (!asset.sprite) {
-				// static entity
 				const tW = asset.width ?? W;
 				const tH = asset.height ?? H;
 				ctx.drawImage(asset.image, 0, 0, tW, tH, drawX, drawY, tW, tH);
 				continue;
 			}
 
-			// SPRITE: pick current frame (source rect) and draw
 			const { sx, sy, sw, sh } = this.computeSpriteSourceRect(
 				asset,
 				entity,
@@ -583,14 +768,9 @@ class GameMap {
 			ctx.drawImage(asset.image, sx, sy, sw, sh, drawX, drawY, destW, destH);
 		}
 
-		// reset transform
 		ctx.setTransform(1, 0, 0, 1, 0, 0);
 	}
 
-	/**
-	 * Computes the source rectangle (sx,sy,sw,sh) to sample from the spritesheet
-	 * based on the entity's animation state and the asset's sprite metadata.
-	 */
 	private computeSpriteSourceRect(
 		asset: ImageAsset,
 		entity: Entity,
@@ -606,9 +786,7 @@ class GameMap {
 			(sprite as SpriteMeta)?.animations?.[animName] ??
 			(sprite as SpriteMeta)?.animations?.[defaultAnimName];
 
-		// Fallback if no animation config is present
 		if (!anim) {
-			// Use first frame of grid/rects
 			if ((sprite as SpriteMeta).mode === "rects") {
 				const r = (sprite as RectsSpriteMeta).rects?.[0] ?? {
 					x: 0,
@@ -625,20 +803,16 @@ class GameMap {
 			return { sx: 0, sy: 0, sw: fw, sh: fh };
 		}
 
-		// initialize start time if needed
 		if (entity.animationStartMs == null) {
 			entity.animationStartMs = perfNow;
-			// entity.animationPingPongDir = 1; // kept for future use if you wish
 		}
 
-		// manual override?
 		if (typeof entity.animationFrameOverride === "number") {
 			const frameIndex =
 				anim.frames[entity.animationFrameOverride] ?? anim.frames[0];
 			return this.frameIndexToRect(sprite, frameIndex);
 		}
 
-		// paused? hold on first frame
 		if (entity.animationPaused) {
 			const frameIndex = anim.frames[0];
 			return this.frameIndexToRect(sprite, frameIndex);
@@ -655,7 +829,6 @@ class GameMap {
 				return this.frameIndexToRect(sprite, frames[idx]);
 			}
 			case "pingpong": {
-				// e.g., for N frames, pingpong length = (N-1)*2
 				const period = Math.max(1, (frames.length - 1) * 2);
 				const step = Math.floor((elapsed / per) % period);
 				const goingForward = step < frames.length - 1;
@@ -671,11 +844,6 @@ class GameMap {
 		}
 	}
 
-	/**
-	 * Converts a logical frame index into a source rect depending on the sprite mode.
-	 * - For `rects`, it indexes the explicit list.
-	 * - For `grid`, it maps the index to (row,col) based on order and frame size.
-	 */
 	private frameIndexToRect(
 		sprite: NonNullable<ImageAsset["sprite"]>,
 		frameIndex: number,
@@ -688,7 +856,6 @@ class GameMap {
 			return { sx: r.x, sy: r.y, sw: r.w, sh: r.h };
 		}
 
-		// grid mode
 		const [fw, fh] = s.frameSize ?? [0, 0];
 		const cols: number = s.grid?.cols ?? 1;
 		const rows: number = s.grid?.rows ?? 1;
